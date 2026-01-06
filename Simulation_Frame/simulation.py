@@ -1,6 +1,7 @@
 from typing import List,Optional
 import random
-import Node,Location
+from .node import Node
+from .location import Location
 
 class Simulation:
     def __init__(self,area:int,size:int,range:int,items:List[str]=None):
@@ -30,11 +31,19 @@ class Simulation:
     def get_nodes(self):
         return self.nodes
     
+    def __repr__(self):
+        size = len(self.nodes)
+        ret = ""
+        ret += f"Number of nodes: {size}\n"
+        for i in range(10 if size > 10 else size):
+            ret += f"{i+1}:{self.nodes[i]}"
+        
+        return ret
+
     def __str__(self):
-        return f"Number of nodes: {self.size}"
+        return self.__repr__()
 
         
 
-sim = Simulation(1000,50,10)
-print(sim)
+
 

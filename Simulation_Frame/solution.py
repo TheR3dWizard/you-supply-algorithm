@@ -1,7 +1,7 @@
-from abc import ABC, abstractmethod,property
+from abc import ABC, abstractmethod
 from typing import List
-from Node import Node
-from Path import Path
+from .node import Node
+from .path import Path
 
 class Solution(ABC):
     @abstractmethod

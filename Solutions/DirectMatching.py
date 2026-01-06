@@ -1,12 +1,20 @@
-from typing import List
-from Simulation_Frame import Location,Node,Solution,Path,Simulation
-
+from typing import List,Optional
+from Simulation_Frame import Node,Path,Simulation,Solution
 
 class DirectMatching(Solution):
-    def __init__(self):
+    def __init__(self,simulation:Optional[Simulation]):
         self.paths = []
+        self.simulation = simulation if simulation else None
 
-    def solve(self,nodes:List[Node]) -> List[Path]:
+    def solve(self) -> List[Path]:
+
+        
+        if self.simulation:
+            nodes = self.simulation.get_nodes()
+        else:
+            print("No simulation present")
+            return -1
+
         source_nodes = []
         source_items = set()
 
@@ -24,12 +32,12 @@ class DirectMatching(Solution):
                 sink_nodes.append(node)
                 sink_items.add(node.item)
 
-            if node.item in items_dict.keys:
+            if node.item in items_dict.keys():
                 items_dict[node.item].append(node)
             else:
                 items_dict[node.item] = [node]
 
-        for item in items_dict.keys:
+        for item in items_dict.keys():
             available = items_dict[item]
             for source_node in available:
                 if source_node.is_source:
@@ -45,7 +53,17 @@ class DirectMatching(Solution):
                             fill_size = abs(sink_node_cand.value) 
                             sink_node = sink_node_cand
 
+                    if not sink_node:
+                        continue
+
                     path = Path(nodes=[source_node,sink_node])
-                    paths.append(Path)
+                    paths.append(path)
         
         return paths
+    
+    def get_total_distance(self, paths):
+        return None
+    
+    def visualize_paths(self, paths):
+        return None
+    

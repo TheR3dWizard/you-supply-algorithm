@@ -1,5 +1,5 @@
 from typing import List
-from Simulation import Location,Node,Solution,Path
+from Simulation_Frame import Location,Node,Solution,Path,Simulation
 
 
 class DirectMatching(Solution):

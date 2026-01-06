@@ -7,11 +7,8 @@ sim.populate_nodes()
 
 sol = DirectMatching(sim)
 paths = sol.solve()
-
-for i in range(len(paths)):
-    RED = "\033[0;31m"
-    RESET = "\033[0m"
-    BOLD = "\033[1m"
-
-    print(f"{RED}{BOLD}{i+1}th path{RESET}\n")
-    print(paths[i])
+sol.print_paths()
+tot_dist = sol.get_total_distance()
+print(f"Total Distance of all Paths: {tot_dist}")
+unsat_nodes = sol.get_unsatisfied_nodes()
+print(f"Number of unsatisifed nodes: {len(unsat_nodes)}")

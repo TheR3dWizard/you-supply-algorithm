@@ -1,5 +1,5 @@
 from typing import List,Optional
-from Simulation_Frame import Node,Path,Simulation,Solution
+from Simulation_Frame import Path,Simulation,Solution
 
 class DirectMatching(Solution):
     def __init__(self,simulation:Optional[Simulation]):
@@ -48,22 +48,43 @@ class DirectMatching(Solution):
                     #select suitable sink node
                     for sink_node_cand in available:
                         if sink_node_cand.is_source:
-                            pass
+                            continue
+                        if self.simulation.is_node_satisfied(sink_node_cand):
+                            continue
                         if abs(sink_node_cand.value) < size and abs(sink_node_cand.value) > fill_size:
                             fill_size = abs(sink_node_cand.value) 
                             sink_node = sink_node_cand
 
                     if not sink_node:
                         continue
-
+                    self.simulation.satisfy_node(source_node)
+                    self.simulation.satisfy_node(sink_node)
                     path = Path(nodes=[source_node,sink_node])
                     paths.append(path)
-        
+        self.paths = paths
         return paths
     
-    def get_total_distance(self, paths):
-        return None
+    def get_total_distance(self):
+        tot_dist = 0.0
+        for path in self.paths:
+            tot_dist += path.get_length()
+        return tot_dist
     
+    def get_unsatisfied_nodes(self):
+        return self.simulation.get_unsatisfied_nodes()
+
     def visualize_paths(self, paths):
         return None
+    
+    def print_paths(self):
+        for i in range(len(self.paths)):
+            RED = "\033[0;31m"
+            RESET = "\033[0m"
+            BOLD = "\033[1m"
+
+            print(f"{RED}{BOLD}{i+1}th path{RESET}\n")
+            print(self.paths[i])
+
+    def get_all_metrics(self):
+        return super().get_all_metrics()
     

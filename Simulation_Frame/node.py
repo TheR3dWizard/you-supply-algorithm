@@ -1,9 +1,15 @@
+from .location import Location
+
+
 class Node:
-    def __init__(self, item:str,value:int,location):
+    def __init__(self, item:str,value:int,location:Location):
         self.item = item
         self.value = value
         self.location = location
         self.is_source = value > 0
+
+    def get_distance(self,other) -> float:
+        return self.location.get_distance(other.location)
 
     def __repr__(self):
         
@@ -26,6 +32,5 @@ class Node:
             f"{BOLD}{BLUE}Source:{RESET} {source_color}{source_text}{RESET}\n"
         )
 
-    
     def __str__(self):
         return self.__repr__()

@@ -45,7 +45,7 @@ class Simulation:
     def is_node_satisfied(self,node):
         return node not in self.get_unsatisfied_nodes()
 
-    def get_nodes(self):
+    def get_nodes(self) -> List[Node]:
         return self.nodes
     
     def __repr__(self):

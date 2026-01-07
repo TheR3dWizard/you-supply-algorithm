@@ -11,6 +11,8 @@ class YouSupplyAlgo(Solution):
         self.simulation = simulation if simulation else None
         self.geo_size = geo_size
 
+    def set_simulation(self, simulation):
+        return super().set_simulation(simulation)
 
     def geographical_cluster(self,nodes:List[Node],num_points:int = 50) -> List[Cluster]:
 
@@ -31,6 +33,7 @@ class YouSupplyAlgo(Solution):
         clusters = defaultdict(list)
 
         for i, label in enumerate(cluster_labels):
+            self.simulation.satisfy_node_index(i)
             clusters[label].append(self.simulation.get_nodes()[i])
 
         print()
@@ -72,6 +75,7 @@ class YouSupplyAlgo(Solution):
                 node = min(nodes, key=lambda x: x.value)
                 deficit -= node.value
                 nodes.remove(node)
+                self.simulation.unsatisfy_node(node)
                 cluster.remove_sink(node)
 
         if cluster.sinks == []:
@@ -86,6 +90,7 @@ class YouSupplyAlgo(Solution):
                 if excess - node.value >= 0: #excess cannot go below 0
                     excess -= node.value
                     nodes.remove(node)
+                    self.simulation.unsatisfy_node(node)
                     cluster.remove_source(node)
                 else:
                     break
@@ -174,15 +179,33 @@ class YouSupplyAlgo(Solution):
             paths = self.create_paths(feas_cluster)
             self.paths.extend(paths)
 
+    def get_unsatisfied_nodes(self):
+        return self.simulation.get_unsatisfied_nodes()
+    
+    def get_satisfaction_metrics(self,show:bool=False):
+        tot_nodes = self.simulation.size
+        unsat_nodes = len(self.get_unsatisfied_nodes())
+        satisfaction_percent = ((tot_nodes - unsat_nodes) / tot_nodes) * 100
+        print(f"Total Nodes: {tot_nodes}")
+        print(f"Unsatisfied Nodes: {unsat_nodes}")
+        print(f"Satisfaction Percentage: {satisfaction_percent:.2f}%")
+        return satisfaction_percent
 
-    def get_all_metrics(self):
-        return super().get_all_metrics()
+    def get_all_metrics(self,out:Optional[str]=None):
+        tot_dist = self.get_total_distance()
+        satisfaction_percent = self.get_satisfaction_metrics()
+
+        if not out:
+            print(f"Total Distance of all Paths: {tot_dist}")
+            print(f"Satisfaction Percentage: {satisfaction_percent:.2f}%")
+        else:
+            with open(out,'a') as f:
+                f.write("YouSupply Algorithm Metrics:\n")
+                f.write(f"Total Distance of all Paths: {tot_dist}\n")
+                f.write(f"Satisfaction Percentage: {satisfaction_percent:.2f}%\n")
 
     def get_total_distance(self):
-        tot_dist = 0.0
-        for path in self.paths:
-            tot_dist += path.get_length()
-        return tot_dist
+        return super().get_total_distance()
     
     def print_paths(self):
         return super().print_paths()

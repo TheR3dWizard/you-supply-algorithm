@@ -30,9 +30,24 @@ class Simulation:
             self.nodes.append(node)
             self.satisfied_nodes.append(False)
 
+    def load_nodes(self,nodes:Node):
+        self.nodes = nodes
+        self.satisfied_nodes = [False for _ in nodes]
+        self.size = len(nodes)
+
     def satisfy_node(self,node:Node) -> None:
         i = self.nodes.index(node)
         self.satisfied_nodes[i] = True
+
+    def satisfy_node_index(self,index:int) -> None:
+        self.satisfied_nodes[index] = True
+
+    def unsatisfy_node(self,node:Node) -> None:
+        i = self.nodes.index(node)
+        self.satisfied_nodes[i] = False
+    
+    def unsatisfy_node_index(self,index:int) -> None:
+        self.satisfied_nodes[index] = False
 
     def get_unsatisfied_nodes(self) -> List[Node]:
         unsat_nodes = []

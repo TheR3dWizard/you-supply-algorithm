@@ -6,6 +6,9 @@ class DirectMatching(Solution):
         self.paths = []
         self.simulation = simulation if simulation else None
 
+    def set_simulation(self, simulation):
+        return super().set_simulation(simulation)
+
     def solve(self) -> List[Path]:
 
         
@@ -65,26 +68,37 @@ class DirectMatching(Solution):
         return paths
     
     def get_total_distance(self):
-        tot_dist = 0.0
-        for path in self.paths:
-            tot_dist += path.get_length()
-        return tot_dist
+        return super().get_total_distance()
     
     def get_unsatisfied_nodes(self):
         return self.simulation.get_unsatisfied_nodes()
+
+    def get_satisfaction_metrics(self):
+        tot_nodes = self.simulation.size
+        unsat_nodes = len(self.get_unsatisfied_nodes())
+        satisfaction_percent = ((tot_nodes - unsat_nodes) / tot_nodes) * 100
+        print(f"Total Nodes: {tot_nodes}")
+        print(f"Unsatisfied Nodes: {unsat_nodes}")
+        print(f"Satisfaction Percentage: {satisfaction_percent:.2f}%")
+        return satisfaction_percent
 
     def visualize_paths(self, paths):
         return None
     
     def print_paths(self):
-        for i in range(len(self.paths)):
-            RED = "\033[0;31m"
-            RESET = "\033[0m"
-            BOLD = "\033[1m"
+        return super().print_paths()
 
-            print(f"{RED}{BOLD}{i+1}th path{RESET}\n")
-            print(self.paths[i])
+    def get_all_metrics(self,out:Optional[str]=None):
+        tot_dist = self.get_total_distance()
+        satisfaction_percent = self.get_satisfaction_metrics()
 
-    def get_all_metrics(self):
-        return super().get_all_metrics()
+        if not out:
+            print(f"Total Distance of all Paths: {tot_dist}")
+            print(f"Satisfaction Percentage: {satisfaction_percent:.2f}%")
+        else:
+            with open(out,'a') as f:
+                f.write("Direct Matching Algorithm Metrics:\n")
+                f.write(f"Total Distance of all Paths: {tot_dist}\n")
+                f.write(f"Satisfaction Percentage: {satisfaction_percent:.2f}%\n")
+        
     

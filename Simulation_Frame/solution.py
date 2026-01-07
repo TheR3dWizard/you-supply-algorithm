@@ -4,13 +4,21 @@ from .node import Node
 from .path import Path
 
 class Solution(ABC):
+
+    @abstractmethod
+    def set_simulation(self,simulation) -> None:
+        self.simulation = simulation
+
     @abstractmethod
     def solve(self) -> List[Path]:
         pass
 
     @abstractmethod
     def get_total_distance(self) -> float:
-        pass
+        tot_dist = 0.0
+        for path in self.paths:
+            tot_dist += path.get_length()
+        return tot_dist
 
     @abstractmethod
     def visualize_paths(self) -> None:
@@ -18,7 +26,13 @@ class Solution(ABC):
 
     @abstractmethod
     def print_paths(self) -> None:
-        pass
+        for i in range(len(self.paths)):
+            RED = "\033[0;31m"
+            RESET = "\033[0m"
+            BOLD = "\033[1m"
+
+            print(f"{RED}{BOLD}{i+1}th path{RESET}\n")
+            print(self.paths[i])
 
     @abstractmethod
     def get_all_metrics(self) -> None:

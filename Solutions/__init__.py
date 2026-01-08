@@ -1,2 +1,2 @@
-from .directmatching import DirectMatching
+from .DirectMatching import DirectMatching
 from .yousupplyalgo import YouSupplyAlgo

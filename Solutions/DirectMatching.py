@@ -2,9 +2,16 @@ from typing import List,Optional
 from Simulation_Frame import Path,Simulation,Solution
 
 class DirectMatching(Solution):
-    def __init__(self,simulation:Optional[Simulation]):
+    def __init__(self,simulation:Optional[Simulation],name:Optional[str]="Direct Matching"):
         self.paths = []
         self.simulation = simulation if simulation else None
+        self.name = name
+        self.metrics = {
+            "algorithm_name":name,
+            "total_distance":0,
+            "total_nodes":self.simulation.size,
+            "satisfaction_percentage":0
+            }
 
     def set_simulation(self, simulation):
         return super().set_simulation(simulation)
@@ -80,6 +87,7 @@ class DirectMatching(Solution):
         print(f"Total Nodes: {tot_nodes}")
         print(f"Unsatisfied Nodes: {unsat_nodes}")
         print(f"Satisfaction Percentage: {satisfaction_percent:.2f}%")
+        self.metrics["satisfaction_percentage"] = satisfaction_percent
         return satisfaction_percent
 
     def visualize_paths(self, paths):

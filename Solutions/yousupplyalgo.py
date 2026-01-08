@@ -6,10 +6,17 @@ from sklearn.cluster import SpectralClustering
 
 class YouSupplyAlgo(Solution):
 
-    def __init__(self,simulation:Optional[Simulation],geo_size:int=50):
+    def __init__(self,simulation:Optional[Simulation],geo_size:int=50,name:Optional[str]="YouSupply"):
         self.paths = []
         self.simulation = simulation if simulation else None
         self.geo_size = geo_size
+        self.name = name
+        self.metrics = {
+            "algorithm_name":name,
+            "total_distance":0,
+            "total_nodes":self.simulation.size,
+            "satisfaction_percentage":0
+            }
 
     def set_simulation(self, simulation):
         return super().set_simulation(simulation)
@@ -189,6 +196,7 @@ class YouSupplyAlgo(Solution):
         print(f"Total Nodes: {tot_nodes}")
         print(f"Unsatisfied Nodes: {unsat_nodes}")
         print(f"Satisfaction Percentage: {satisfaction_percent:.2f}%")
+        self.metrics["satisfaction_percentage"] = satisfaction_percent
         return satisfaction_percent
 
     def get_all_metrics(self,out:Optional[str]=None,name:Optional[str]="YouSupply"):

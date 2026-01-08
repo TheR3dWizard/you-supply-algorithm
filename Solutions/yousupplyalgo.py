@@ -191,7 +191,7 @@ class YouSupplyAlgo(Solution):
         print(f"Satisfaction Percentage: {satisfaction_percent:.2f}%")
         return satisfaction_percent
 
-    def get_all_metrics(self,out:Optional[str]=None):
+    def get_all_metrics(self,out:Optional[str]=None,name:Optional[str]="YouSupply"):
         tot_dist = self.get_total_distance()
         satisfaction_percent = self.get_satisfaction_metrics()
 
@@ -200,9 +200,9 @@ class YouSupplyAlgo(Solution):
             print(f"Satisfaction Percentage: {satisfaction_percent:.2f}%")
         else:
             with open(out,'a') as f:
-                f.write("YouSupply Algorithm Metrics:\n")
+                f.write(f"{name} Algorithm Metrics:\n")
                 f.write(f"Total Distance of all Paths: {tot_dist}\n")
-                f.write(f"Satisfaction Percentage: {satisfaction_percent:.2f}%\n")
+                f.write(f"Satisfaction Percentage: {satisfaction_percent:.2f}%\n\n")
 
     def get_total_distance(self):
         return super().get_total_distance()

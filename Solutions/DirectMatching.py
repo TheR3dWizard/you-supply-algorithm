@@ -88,7 +88,7 @@ class DirectMatching(Solution):
     def print_paths(self):
         return super().print_paths()
 
-    def get_all_metrics(self,out:Optional[str]=None):
+    def get_all_metrics(self,out:Optional[str]=None,name:Optional[str]="Direct Matching"):
         tot_dist = self.get_total_distance()
         satisfaction_percent = self.get_satisfaction_metrics()
 
@@ -97,8 +97,8 @@ class DirectMatching(Solution):
             print(f"Satisfaction Percentage: {satisfaction_percent:.2f}%")
         else:
             with open(out,'a') as f:
-                f.write("Direct Matching Algorithm Metrics:\n")
+                f.write(f"{name} Algorithm Metrics:\n")
                 f.write(f"Total Distance of all Paths: {tot_dist}\n")
-                f.write(f"Satisfaction Percentage: {satisfaction_percent:.2f}%\n")
+                f.write(f"Satisfaction Percentage: {satisfaction_percent:.2f}%\n\n")
         
     

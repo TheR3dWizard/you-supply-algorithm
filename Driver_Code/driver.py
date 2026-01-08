@@ -1,5 +1,5 @@
 from Simulation_Frame import Simulation
-from Solutions import DirectMatching,YouSupplyAlgo
+from Solutions import DirectMatching,YouSupplyAlgo,OptimizedDirectMatching
 
 open("metrics.txt","w").close()
 
@@ -14,6 +14,14 @@ tot_dist = sol.get_total_distance()
 print(f"Total Distance of all Paths with DirectMatching: {tot_dist}")
 sol.get_satisfaction_metrics()
 sol.get_all_metrics(out="metrics.txt")
+
+sol = OptimizedDirectMatching(sim)
+paths = sol.solve()
+sol.print_paths()
+tot_dist = sol.get_total_distance()
+print(f"Total Distance of all Paths with Optimized DirectMatching: {tot_dist}")
+sol.get_satisfaction_metrics()
+sol.get_all_metrics(out="metrics.txt",name="Optimized Direct Matching")
 
 sim.load_nodes(sim.get_nodes())
 sol = YouSupplyAlgo(sim,geo_size=50)
@@ -32,5 +40,5 @@ sol.print_paths()
 tot_dist = sol.get_total_distance()
 print(f"Total Distance of all Paths with DirectMatching after YouSupply: {tot_dist}")
 sol.get_satisfaction_metrics()
-sol.get_all_metrics(out="metrics.txt")
+sol.get_all_metrics(out="metrics.txt",name="Direct Matching after YouSupply")
 

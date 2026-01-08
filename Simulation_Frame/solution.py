@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import List
+import csv
+from typing import List, Optional
 from .node import Node
 from .path import Path
 
@@ -18,6 +19,7 @@ class Solution(ABC):
         tot_dist = 0.0
         for path in self.paths:
             tot_dist += path.get_length()
+        self.metrics["total_distance"] = tot_dist
         return tot_dist
 
     @abstractmethod
@@ -37,3 +39,8 @@ class Solution(ABC):
     @abstractmethod
     def get_all_metrics(self) -> None:
         pass
+
+    def csv_metrics(self,csv_path:Optional[str]="csv_metrics.csv") -> None:
+        with open(csv_path, mode="a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=self.metrics.keys())
+            writer.writerow(self.metrics)

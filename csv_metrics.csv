@@ -1,0 +1,5 @@
+algorithm_name,total_distance,total_nodes,satisfaction_percentage
+Direct Matching,213137.06947251537,1000,81.6
+Optimized Direct Matching,57347.11396435513,1000,89.9
+YouSupply,7574.874242371938,1000,86.0
+ODM + YouSupply,16505.11819825227,140,54.285714285714285

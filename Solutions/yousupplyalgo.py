@@ -1,5 +1,7 @@
 from collections import defaultdict
 from typing import Optional,List
+
+from matplotlib import pyplot as plt
 from Simulation_Frame import Solution,Simulation,Node,Path,Cluster
 from sklearn.cluster import SpectralClustering
 
@@ -176,13 +178,15 @@ class YouSupplyAlgo(Solution):
             path.append(next)
             current = next
 
+        subpaths.append(Path(path[previndex:]))
         return subpaths
     
-    def solve(self):
+    def solve(self,show=False):
         paths:List[Path] = []
         nodes = self.simulation.get_nodes()
         geo_clusters = self.geographical_cluster(nodes,num_points=self.geo_size)
-
+        if show:
+            self.plotclusters(geo_clusters)
         for geo_cluster in geo_clusters:
             feas_cluster = self.feasibility_cluster(geo_cluster)
             # print(feas_cluster)
@@ -190,6 +194,30 @@ class YouSupplyAlgo(Solution):
                 continue
             paths = self.create_paths(feas_cluster)
             self.paths.extend(paths)
+
+    def plotclusters(self,clusters:List[Cluster]):
+        plt.figure(figsize=(10, 10))
+        for cluster in clusters:
+            x = [node.location.x for node in cluster.nodes]
+            y = [node.location.y for node in cluster.nodes]
+            plt.scatter(x, y)
+        plt.show()
+        
+    def plotallpaths(self):
+        """
+        Plots all the different plots into one graph with each path in a different color.
+        """
+        plt.figure(figsize=(10, 10))
+        colors = plt.cm.get_cmap('hsv', len(self.paths) + 1)
+        for i, path in enumerate(self.paths):
+            x = [node.location.x for node in path.nodes]
+            y = [node.location.y for node in path.nodes]
+            plt.plot(x, y, color=colors(i), label=f'Path {i+1}')
+        plt.xlabel("X Position")
+        plt.ylabel("Y Position")
+        plt.title("All Paths")
+        plt.legend()
+        plt.show()
 
     def get_unsatisfied_nodes(self):
         return self.simulation.get_unsatisfied_nodes()

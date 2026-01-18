@@ -160,7 +160,7 @@ class YouSupplyAlgo(Solution):
 
         while len(visited) < cluster.size:
             available[current.item] += current.value
-            # createsubpath()
+            createsubpath()
             possiblesinks = [
                 node for node in cluster.sinks if node not in visited and check(node)
             ]

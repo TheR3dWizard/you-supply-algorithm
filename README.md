@@ -8,3 +8,9 @@ Run this command in your terminal at the root directory to execute the driver co
 ```bash
 python -m Driver_Code.driver
 ```
+
+Run this command in the Driver_Code directory to execute the frontend:
+
+```bash
+streamlit run frontend.py
+```  

@@ -2,6 +2,7 @@ from typing import List,Optional
 import random
 from .node import Node
 from .location import Location
+import matplotlib.pyplot as plt
 
 class Simulation:
     def __init__(self,area:int,size:int,range:int,items:List[str]=None):
@@ -70,6 +71,15 @@ class Simulation:
     def get_nodes(self) -> List[Node]:
         return self.nodes
     
+    def plotnodes(self):
+        x = [node.location.x for node in self.nodes]
+        y = [node.location.y for node in self.nodes]
+        plt.scatter(x, y)
+        plt.xlabel("X Position")
+        plt.ylabel("Y Position")
+        plt.title("Nodes in Simulation")
+        plt.show()
+
     def __repr__(self):
         size = len(self.nodes)
         ret = ""

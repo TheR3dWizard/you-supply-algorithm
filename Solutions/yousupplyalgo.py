@@ -19,14 +19,12 @@ class YouSupplyAlgo(Solution):
             "total_nodes":self.simulation.size,
             "satisfaction_percentage":0
             }
+        self.clusterlist:List[Cluster] = []
 
     def set_simulation(self, simulation):
         return super().set_simulation(simulation)
 
     def geographical_cluster(self,nodes:List[Node],num_points:int = 50) -> List[Cluster]:
-
-        cluster_list:List[Cluster] = []
-
         spc = SpectralClustering(
             n_clusters=self.simulation.size // num_points if self.simulation.size // num_points != 0 else 1,
             random_state=42,
@@ -53,9 +51,8 @@ class YouSupplyAlgo(Solution):
                     cluster.add_sink(node)
                 else:
                     cluster.add_source(node)
-            cluster_list.append(cluster)
+            self.clusterlist.append(cluster)
 
-        return cluster_list
 
     def feasibility_cluster(self,cluster:Cluster) -> Cluster:
         if cluster.sinks == [] or cluster.sources == []:
@@ -184,10 +181,10 @@ class YouSupplyAlgo(Solution):
     def solve(self,show=False):
         paths:List[Path] = []
         nodes = self.simulation.get_nodes()
-        geo_clusters = self.geographical_cluster(nodes,num_points=self.geo_size)
+        self.geographical_cluster(nodes,num_points=self.geo_size)
         if show:
-            self.plotclusters(geo_clusters)
-        for geo_cluster in geo_clusters:
+            self.plotclusters(self.clusterlist)
+        for geo_cluster in self.clusterlist:
             feas_cluster = self.feasibility_cluster(geo_cluster)
             # print(feas_cluster)
             if feas_cluster.size == 0:
@@ -195,29 +192,16 @@ class YouSupplyAlgo(Solution):
             paths = self.create_paths(feas_cluster)
             self.paths.extend(paths)
 
-    def plotclusters(self,clusters:List[Cluster]):
-        plt.figure(figsize=(10, 10))
+    def plotclusters(self,clusters:Optional[List[Cluster]]=None):
+        if not clusters:
+            clusters = self.clusterlist
+        # plt.figure(figsize=(10, 10))
         for cluster in clusters:
             x = [node.location.x for node in cluster.nodes]
             y = [node.location.y for node in cluster.nodes]
             plt.scatter(x, y)
         plt.show()
         
-    def plotallpaths(self):
-        """
-        Plots all the different plots into one graph with each path in a different color.
-        """
-        plt.figure(figsize=(10, 10))
-        colors = plt.cm.get_cmap('hsv', len(self.paths) + 1)
-        for i, path in enumerate(self.paths):
-            x = [node.location.x for node in path.nodes]
-            y = [node.location.y for node in path.nodes]
-            plt.plot(x, y, color=colors(i), label=f'Path {i+1}')
-        plt.xlabel("X Position")
-        plt.ylabel("Y Position")
-        plt.title("All Paths")
-        plt.legend()
-        plt.show()
 
     def get_unsatisfied_nodes(self):
         return self.simulation.get_unsatisfied_nodes()

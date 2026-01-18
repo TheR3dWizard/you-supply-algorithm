@@ -80,6 +80,12 @@ class YouSupplyAlgo(Solution):
         for deficit, nodes in deficits:
             while deficit < 0:
                 node = min(nodes, key=lambda x: x.value)
+                if deficit-node.value > 0:
+                    # if deficit is -3, and sink is -5, then sink should be converted to a -2 node and freepool should have a -3 node
+                    deficit_node = node.split_sink(deficit)
+                    self.simulation.add_node(deficit_node)
+                    #node is now changed to the split value so deficit-node.value is 0
+                    break
                 deficit -= node.value
                 nodes.remove(node)
                 self.simulation.unsatisfy_node(node)
@@ -102,7 +108,6 @@ class YouSupplyAlgo(Solution):
                 else:
                     break
         # TODO: write functionality to change a half excess node into a full excess and fitting node
-        # if deficit is -3, and sink is -5, then sink should be converted to a -2 node and freepool should have a -3 node
 
         if cluster.sources == []:
             print("No sources left in cluster, returning empty cluster")
@@ -155,7 +160,7 @@ class YouSupplyAlgo(Solution):
 
         while len(visited) < cluster.size:
             available[current.item] += current.value
-            createsubpath()
+            # createsubpath()
             possiblesinks = [
                 node for node in cluster.sinks if node not in visited and check(node)
             ]

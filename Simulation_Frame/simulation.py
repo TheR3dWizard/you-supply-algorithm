@@ -23,12 +23,19 @@ class Simulation:
         for i in range(self.size):
             item = random.choice(self.items)
             value = random.randint(-1*self.range,self.range)
+            while value == 0:
+                value = random.randint(-1*self.range,self.range)
             x_val = random.randint(0,self.area)
             y_val = random.randint(0,self.area)
             location = Location(x_val,y_val)
             node = Node(item,value,location)
             self.nodes.append(node)
             self.satisfied_nodes.append(False)
+
+    def add_node(self,node:Node):
+        self.nodes.append(node)
+        self.satisfied_nodes.append(False)
+        self.size += 1
 
     def load_nodes(self,nodes:Node):
         self.nodes = nodes

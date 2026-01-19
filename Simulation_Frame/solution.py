@@ -46,7 +46,7 @@ class Solution(ABC):
         Plots all the different plots into one graph with each path in a different color.
         """
         # plt.figure(figsize=(10, 10))
-        colors = plt.cm.get_cmap('hsv', len(self.paths) + 1)
+        colors = plt.colormaps.get_cmap('hsv').resampled(len(self.paths) + 1)
         for i, path in enumerate(self.paths):
             x = [node.location.x for node in path.nodes]
             y = [node.location.y for node in path.nodes]

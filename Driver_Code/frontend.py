@@ -42,7 +42,7 @@ def render_backend_plot(plot_func, size=(5, 5)):
         fig = plt.figure(figsize=size, dpi=100)
         plot_func()
         fig.set_size_inches(*size, forward=True)
-        st.pyplot(fig, use_container_width=False)
+        st.pyplot(fig, width="content")
         plt.close(fig)
 
 
@@ -153,5 +153,5 @@ if run_button:
         for idx, path in enumerate(sol.paths):
             st.markdown(f"**Path {idx + 1}**")
 
-            render_backend_plot(path.plotpath)
+            render_backend_plot(path.plotpath,size=(2,2))
 

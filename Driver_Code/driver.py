@@ -46,4 +46,3 @@ print(f"Total Distance of all Paths with DirectMatching after YouSupply: {tot_di
 sol.get_satisfaction_metrics()
 sol.get_all_metrics(out="metrics.txt",name="Direct Matching after YouSupply")
 sol.csv_metrics()
-

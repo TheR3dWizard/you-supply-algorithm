@@ -190,16 +190,33 @@ class GeneticAlgorithm(Solution):
         source_positions = nodes_to_positions(cluster.sources)
         sink_positions = nodes_to_positions(cluster.sinks)
         
-        # KMeans clustering: assign sinks to nearest source
         n_sources = len(cluster.sources)
-        kmeans = KMeans(n_clusters=n_sources, random_state=0).fit(sink_positions)
+        n_sinks = len(cluster.sinks)
         
         # Map sink indices to source indices
         assignments = defaultdict(list)
-        for sink_idx, label in enumerate(kmeans.labels_):
-            sink_node = cluster.sinks[sink_idx]
-            source_node = cluster.sources[label]
-            assignments[source_node].append(sink_node)
+        
+        # If more sources than sinks, assign each sink to nearest source directly
+        if n_sources > n_sinks:
+            for sink_idx, sink_node in enumerate(cluster.sinks):
+                sink_pos = sink_positions[sink_idx]
+                # Find nearest source
+                min_dist = float('inf')
+                nearest_source_idx = 0
+                for source_idx, source_pos in enumerate(source_positions):
+                    dist = np.linalg.norm(sink_pos - source_pos)
+                    if dist < min_dist:
+                        min_dist = dist
+                        nearest_source_idx = source_idx
+                assignments[cluster.sources[nearest_source_idx]].append(sink_node)
+        else:
+            # KMeans clustering: assign sinks to nearest source
+            kmeans = KMeans(n_clusters=n_sources, random_state=0).fit(sink_positions)
+            
+            for sink_idx, label in enumerate(kmeans.labels_):
+                sink_node = cluster.sinks[sink_idx]
+                source_node = cluster.sources[label]
+                assignments[source_node].append(sink_node)
         
         # Apply capacity constraints - split assignments if capacity exceeded
         capacity_aware_assignments = defaultdict(list)

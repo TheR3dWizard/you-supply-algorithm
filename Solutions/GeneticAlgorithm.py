@@ -25,6 +25,7 @@ def build_distance_matrix(nodes: List[Node]) -> np.ndarray:
 
 
 # GA utility functions
+#TODO: this can be replaced with a proper fitness function evaluating the different metrics
 def route_distance(route: List[int], source_idx: int, dist_matrix: np.ndarray) -> float:
     """Compute total round-trip distance for a route starting/ending at source."""
     if len(route) <= 1:
@@ -40,24 +41,70 @@ def route_distance(route: List[int], source_idx: int, dist_matrix: np.ndarray) -
     dist += dist_matrix[route[-1]][source_idx]
     return dist
 
+def initial_population(self,cluster:Cluster,pop_size:int) -> List[Path]:
+    visited = set()
+    available = defaultdict(int)
+    num_permutations = pop_size
+    matrix = [(Path(),defaultdict(int),set()) for i in range(pop_size)]   #the dict is the available of that specific Path and set is all previous visited nodes
+    
+    # function to check if a node can be satisfied
+    def check(node: Node):
+        if node.item in available:
+            if available[node.item] >= abs(node.value):
+                return True
+            else:
+                return False
+        return False
+    
+    starts = random.sample(cluster.sources,len(cluster.sources))
+    for i in range(pop_size):
+        path,_,visited = matrix[i]
+        start = starts[i % len(cluster.sources)]
+        path.add_node(start)
+        visited.add(start)
 
-def initial_population(size: int, nodes: List[int], source_idx: int) -> List[List[int]]:
-    """Random population of valid routes with source always first."""
-    pop = []
-    sink_nodes = [n for n in nodes if n != source_idx]
-    for _ in range(size):
-        r = sink_nodes.copy()
-        random.shuffle(r)
-        pop.append([source_idx] + r)
-    return pop
+    # computes all the paths
+    for i in range(pop_size):
+        path,inventory,visited = matrix[i]
+        current = path.get_end()
+        while len(path) < cluster.size: # all the nodes have yet to be visited
+            inventory[current.item] += current.value
+            possiblesinks = [
+                node for node in cluster.sinks if node not in visited and check(node)
+            ]
+            possiblesources = [
+                    node for node in cluster.sources if node not in visited
+            ]
+            #This can be changed later to use a more deterministic algorithm to choose the next node but for now raandom is fine
+            possibilities = possiblesinks + possiblesources
+            next = choice(possibilities)
+            visited.add(next)
+            path.add_node(next)
 
+    paths:List[Path] = []
+    for i in range(pop_size):
+        path,_,_ = matrix[i]
+        paths.append(path)
+    
+    return paths
 
+# def initial_population(size: int, nodes: List[int], source_idx: int) -> List[List[int]]:
+#     """Random population of valid routes with source always first."""
+#     pop = []
+#     sink_nodes = [n for n in nodes if n != source_idx]
+#     for _ in range(size):
+#         r = sink_nodes.copy()
+#         random.shuffle(r)
+#         pop.append([source_idx] + r)
+#     return pop
+
+#TODO: instead of distance matrix, the actual Path objects can be used 
 def selection(pop: List[List[int]], dist_matrix: np.ndarray, source_idx: int):
     """Tournament selection."""
     contenders = random.sample(pop, 3)
     return min(contenders, key=lambda r: route_distance(r, source_idx, dist_matrix))
 
-
+#TODO: instead of indices being used to identify nodes, the actual node objects and paths can be used instead 
 def rsscx(parent1: List[int], parent2: List[int], source_idx: int, dist_matrix: np.ndarray) -> List[int]:
     """Random Start Sequential Constructive Crossover - source stays first."""
     n = len(parent1)
@@ -96,7 +143,8 @@ def rsscx(parent1: List[int], parent2: List[int], source_idx: int, dist_matrix: 
         visited.add(next_city)
     return offspring
 
-
+#TODO: it needs to be updated as there are multiple sources in a path and only consecutive lists of sinks can be mutated
+# else if we change the position of a source on the path, then we need to recompute a whole new path with the youSupply algorithm 
 def mutate(route: List[int], source_idx: int, prob: float = 0.1) -> List[int]:
     """Swap mutation - never move the source."""
     if random.random() < prob and len(route) > 2:
@@ -105,13 +153,13 @@ def mutate(route: List[int], source_idx: int, prob: float = 0.1) -> List[int]:
         route[i], route[j] = route[j], route[i]
     return route
 
-
+#TODO: the function calls will be different based on the stuff changed previously
 def genetic_algorithm(nodes: List[int], source_idx: int, dist_matrix: np.ndarray, 
                       generations: int = 150, pop_size: int = 30, 
                       mutation_rate: float = 0.1) -> List[int]:
     """GA route optimization for one source - enforces source at start/end."""
     population = initial_population(pop_size, nodes, source_idx)
-    best = min(population, key=lambda r: route_distance(r, source_idx, dist_matrix))
+    best = min(population, key=lambda r: route_distance(r, source_idx, dist_matrix)) #TODO: instead of route distance, the Path objects can be used to get the total distance 
 
     for gen in range(generations):
         new_pop = []
@@ -207,52 +255,7 @@ class GeneticAlgorithm(YouSupplyAlgo):
         
         return capacity_aware_assignments
 
-    def create_parent_paths(self,cluster:Cluster) -> List[Path]:
-        visited = set()
-        available = defaultdict(int)
-        num_permutations = self.ga_pop_size
-        matrix = [(Path(),defaultdict(int),set()) for i in range(self.ga_pop_size)]   #the dict is the available of that specific Path
-        
-        # function to check if a node can be satisfied
-        def check(node: Node):
-            if node.item in available:
-                if available[node.item] >= abs(node.value):
-                    return True
-                else:
-                    return False
-            return False
 
-        starts = random.sample(cluster.sources,len(cluster.sources))
-        for i in range(self.ga_pop_size):
-            path,_,visited = matrix[i]
-            start = starts[i % len(cluster.sources)]
-            path.add_node(start)
-            visited.add(start)
-
-        # creates all the paths
-        for i in range(self.ga_pop_size):
-            path,inventory,visited = matrix[i]
-            current = path.get_end()
-            while len(path) < cluster.size: # all the nodes have yet to be visited
-                inventory[current.item] += current.value
-                possiblesinks = [
-                    node for node in cluster.sinks if node not in visited and check(node)
-                ]
-                possiblesources = [
-                        node for node in cluster.sources if node not in visited
-                ]
-                #This can be changed later to use a more deterministic algorithm to choose the next node but for now raandom is fine
-                possibilities = possiblesinks + possiblesources
-                next = choice(possibilities)
-                visited.add(next)
-                path.add_node(next)
-
-        paths:List[Path] = []
-        for i in range(self.ga_pop_size):
-            path,_,_ = matrix[i]
-            paths.append(path)
-        
-        return paths
 
     def solve(self) -> List[Path]:
         """Main solve method that runs GA optimization with source/sink and capacity constraints."""
@@ -272,14 +275,17 @@ class GeneticAlgorithm(YouSupplyAlgo):
                 continue
             
             # Assign sinks to sources
+            #TODO: change this to initialize population function atthe top based on youSupply so we get routes that are optimized
             assignments = self.assign_sinks_to_sources(cluster)
             
+            #TODO: Maybe we dont need this?
             # Build distance matrix for this cluster (all nodes: sources + sinks)
             all_cluster_nodes = cluster.sources + cluster.sinks
             node_to_index = {node: idx for idx, node in enumerate(all_cluster_nodes)}
             dist_matrix = build_distance_matrix(all_cluster_nodes)
             
             # Step 3: Run GA for each source
+            #TODO: Change this to work with our youSupply like paths, (I don't think much needs to be changed here)
             for source_node, assigned_sinks in assignments.items():
                 if not assigned_sinks:
                     continue

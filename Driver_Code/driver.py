@@ -1,5 +1,5 @@
 from Simulation_Frame import Simulation
-from Solutions import DirectMatching,YouSupplyAlgo,OptimizedDirectMatching
+from Solutions import DirectMatching,YouSupplyAlgo,OptimizedDirectMatching,GeneticAlgorithm
 
 open("metrics.txt","w").close()
 
@@ -45,4 +45,13 @@ tot_dist = sol.get_total_distance()
 print(f"Total Distance of all Paths with DirectMatching after YouSupply: {tot_dist}")
 sol.get_satisfaction_metrics()
 sol.get_all_metrics(out="metrics.txt",name="Direct Matching after YouSupply")
+sol.csv_metrics()
+
+sol = GeneticAlgorithm(simulation=sim)
+paths = sol.solve()
+sol.print_paths()
+tot_dist = sol.get_total_distance()
+print(f"Total Distance of all Paths with Genetic Algorithm: {tot_dist}")
+sol.get_satisfaction_metrics()
+sol.get_all_metrics(out="metrics.txt",name="Genetic Algorithm")
 sol.csv_metrics()

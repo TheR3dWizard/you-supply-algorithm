@@ -4,6 +4,7 @@ from typing import List, Optional
 from collections import defaultdict
 from sklearn.cluster import KMeans, SpectralClustering
 from Simulation_Frame import Solution, Simulation, Node, Path, Cluster
+from Solutions.yousupplyalgo import YouSupplyAlgo
 
 
 # function to convert Node objects
@@ -125,7 +126,7 @@ def genetic_algorithm(nodes: List[int], source_idx: int, dist_matrix: np.ndarray
     return best
 
 
-class GeneticAlgorithm(Solution):
+class GeneticAlgorithm(YouSupplyAlgo):
     def __init__(self, simulation: Optional[Simulation], 
                  geo_size: int = 50,
                  ga_generations: int = 150,
@@ -148,39 +149,11 @@ class GeneticAlgorithm(Solution):
 
     def set_simulation(self, simulation):
         return super().set_simulation(simulation)
-
+    
     def geographical_cluster(self, nodes: List[Node], num_points: int = 50) -> List[Cluster]:
-        """Cluster nodes geographically using SpectralClustering."""
-        cluster_list: List[Cluster] = []
-        
-        spc = SpectralClustering(
-            n_clusters=self.simulation.size // num_points if self.simulation.size // num_points != 0 else 1,
-            random_state=42,
-            affinity="nearest_neighbors",
-        )
-        
-        positions = []
-        for node in nodes:
-            positions.append(node.location.to_tuple())
-        
-        spc.fit(positions)
-        cluster_labels = spc.labels_
-        clusters = defaultdict(list)
-        
-        for i, label in enumerate(cluster_labels):
-            clusters[label].append(self.simulation.get_nodes()[i])
-        
-        for cluster_nodes in clusters.values():
-            cluster = Cluster(nodes=[])
-            for node in cluster_nodes:
-                if not node.is_source:
-                    cluster.add_sink(node)
-                else:
-                    cluster.add_source(node)
-            cluster_list.append(cluster)
-        
-        return cluster_list
+        return super().geographical_cluster()
 
+    
     def assign_sinks_to_sources(self, cluster: Cluster) -> dict:
         """Assign sinks to sources using KMeans clustering with capacity constraints."""
         if not cluster.sources or not cluster.sinks:
@@ -215,6 +188,51 @@ class GeneticAlgorithm(Solution):
                 # If capacity exceeded, sink remains unassigned (will be handled separately)
         
         return capacity_aware_assignments
+
+    def create_parent_paths(self,cluster:Cluster) -> List[Path]:
+        visited = set()
+        available = defaultdict(int)
+        paths:List[Path] = []
+        num_permutations = self.ga_pop_size
+        matrix = [[Path() for i in range(cluster.size)] for i in range(self.ga_pop_size)]
+        # if cluster.sinks == [] or cluster.sources == []:
+        #     return path
+
+        # function to get the closest node
+        closest = lambda node, possibilities: min(
+            [(node.get_distance(_), _) for _ in possibilities if _ not in visited],
+            key=lambda x: x[0],
+        )
+
+        # TODO: make the first node the closest source node to the curpos
+        current = cluster.sources[0]
+        visited.add(current)
+        path.append(current)
+
+        # function to check if a node can be satisfied
+        def check(node: Node):
+            if node.item in available:
+                if available[node.item] >= abs(node.value):
+                    return True
+                else:
+                    return False
+            return False
+
+
+        while len(visited) < cluster.size:
+            available[current.item] += current.value
+            possiblesinks = [
+                node for node in cluster.sinks if node not in visited and check(node)
+            ]
+            possiblesources = [
+                    node for node in cluster.sources if node not in visited
+            ]
+
+            visited.add(next)
+            path.append(next)
+            current = next
+
+        return subpaths
 
     def solve(self) -> List[Path]:
         """Main solve method that runs GA optimization with source/sink and capacity constraints."""

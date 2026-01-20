@@ -5,6 +5,7 @@ from collections import defaultdict
 from sklearn.cluster import KMeans, SpectralClustering
 from Simulation_Frame import Solution, Simulation, Node, Path, Cluster
 from Solutions.yousupplyalgo import YouSupplyAlgo
+from random import choice,sample
 
 
 # function to convert Node objects
@@ -209,23 +210,9 @@ class GeneticAlgorithm(YouSupplyAlgo):
     def create_parent_paths(self,cluster:Cluster) -> List[Path]:
         visited = set()
         available = defaultdict(int)
-        paths:List[Path] = []
         num_permutations = self.ga_pop_size
-        matrix = [[Path() for i in range(cluster.size)] for i in range(self.ga_pop_size)]
-        # if cluster.sinks == [] or cluster.sources == []:
-        #     return path
-
-        # function to get the closest node
-        closest = lambda node, possibilities: min(
-            [(node.get_distance(_), _) for _ in possibilities if _ not in visited],
-            key=lambda x: x[0],
-        )
-
-        # TODO: make the first node the closest source node to the curpos
-        current = cluster.sources[0]
-        visited.add(current)
-        path.append(current)
-
+        matrix = [(Path(),defaultdict(int),set()) for i in range(self.ga_pop_size)]   #the dict is the available of that specific Path
+        
         # function to check if a node can be satisfied
         def check(node: Node):
             if node.item in available:
@@ -235,21 +222,37 @@ class GeneticAlgorithm(YouSupplyAlgo):
                     return False
             return False
 
+        starts = random.sample(cluster.sources,len(cluster.sources))
+        for i in range(self.ga_pop_size):
+            path,_,visited = matrix[i]
+            start = starts[i % len(cluster.sources)]
+            path.add_node(start)
+            visited.add(start)
 
-        while len(visited) < cluster.size:
-            available[current.item] += current.value
-            possiblesinks = [
-                node for node in cluster.sinks if node not in visited and check(node)
-            ]
-            possiblesources = [
-                    node for node in cluster.sources if node not in visited
-            ]
+        # creates all the paths
+        for i in range(self.ga_pop_size):
+            path,inventory,visited = matrix[i]
+            current = path.get_end()
+            while len(path) < cluster.size: # all the nodes have yet to be visited
+                inventory[current.item] += current.value
+                possiblesinks = [
+                    node for node in cluster.sinks if node not in visited and check(node)
+                ]
+                possiblesources = [
+                        node for node in cluster.sources if node not in visited
+                ]
+                #This can be changed later to use a more deterministic algorithm to choose the next node but for now raandom is fine
+                possibilities = possiblesinks + possiblesources
+                next = choice(possibilities)
+                visited.add(next)
+                path.add_node(next)
 
-            visited.add(next)
-            path.append(next)
-            current = next
-
-        return subpaths
+        paths:List[Path] = []
+        for i in range(self.ga_pop_size):
+            path,_,_ = matrix[i]
+            paths.append(path)
+        
+        return paths
 
     def solve(self) -> List[Path]:
         """Main solve method that runs GA optimization with source/sink and capacity constraints."""

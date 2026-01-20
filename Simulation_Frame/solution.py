@@ -1,7 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import List
+import csv
+from typing import List, Optional
 from .node import Node
 from .path import Path
+import matplotlib.pyplot as plt
 
 class Solution(ABC):
 
@@ -18,6 +20,7 @@ class Solution(ABC):
         tot_dist = 0.0
         for path in self.paths:
             tot_dist += path.get_length()
+        self.metrics["total_distance"] = tot_dist
         return tot_dist
 
     @abstractmethod
@@ -37,3 +40,24 @@ class Solution(ABC):
     @abstractmethod
     def get_all_metrics(self) -> None:
         pass
+
+    def plotallpaths(self):
+        """
+        Plots all the different plots into one graph with each path in a different color.
+        """
+        # plt.figure(figsize=(10, 10))
+        colors = plt.colormaps.get_cmap('hsv').resampled(len(self.paths) + 1)
+        for i, path in enumerate(self.paths):
+            x = [node.location.x for node in path.nodes]
+            y = [node.location.y for node in path.nodes]
+            plt.plot(x, y, color=colors(i), label=f'Path {i+1}')
+        plt.xlabel("X Position")
+        plt.ylabel("Y Position")
+        plt.title("All Paths")
+        # plt.legend()
+        plt.show()
+
+    def csv_metrics(self,csv_path:Optional[str]="csv_metrics.csv") -> None:
+        with open(csv_path, mode="a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=self.metrics.keys())
+            writer.writerow(self.metrics)

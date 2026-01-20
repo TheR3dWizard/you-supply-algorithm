@@ -1,23 +1,30 @@
 from collections import defaultdict
 from typing import Optional,List
+
+from matplotlib import pyplot as plt
 from Simulation_Frame import Solution,Simulation,Node,Path,Cluster
 from sklearn.cluster import SpectralClustering
 
 
 class YouSupplyAlgo(Solution):
 
-    def __init__(self,simulation:Optional[Simulation],geo_size:int=50):
+    def __init__(self,simulation:Optional[Simulation],geo_size:int=50,name:Optional[str]="YouSupply"):
         self.paths = []
         self.simulation = simulation if simulation else None
         self.geo_size = geo_size
+        self.name = name
+        self.metrics = {
+            "algorithm_name":name,
+            "total_distance":0,
+            "total_nodes":self.simulation.size,
+            "satisfaction_percentage":0
+            }
+        self.clusterlist:List[Cluster] = []
 
     def set_simulation(self, simulation):
         return super().set_simulation(simulation)
 
     def geographical_cluster(self,nodes:List[Node],num_points:int = 50) -> List[Cluster]:
-
-        cluster_list:List[Cluster] = []
-
         spc = SpectralClustering(
             n_clusters=self.simulation.size // num_points if self.simulation.size // num_points != 0 else 1,
             random_state=42,
@@ -44,9 +51,8 @@ class YouSupplyAlgo(Solution):
                     cluster.add_sink(node)
                 else:
                     cluster.add_source(node)
-            cluster_list.append(cluster)
+            self.clusterlist.append(cluster)
 
-        return cluster_list
 
     def feasibility_cluster(self,cluster:Cluster) -> Cluster:
         if cluster.sinks == [] or cluster.sources == []:
@@ -73,6 +79,12 @@ class YouSupplyAlgo(Solution):
         for deficit, nodes in deficits:
             while deficit < 0:
                 node = min(nodes, key=lambda x: x.value)
+                if deficit-node.value > 0:
+                    # if deficit is -3, and sink is -5, then sink should be converted to a -2 node and freepool should have a -3 node
+                    deficit_node = node.split_sink(deficit)
+                    self.simulation.add_node(deficit_node)
+                    #node is now changed to the split value so deficit-node.value is 0
+                    break
                 deficit -= node.value
                 nodes.remove(node)
                 self.simulation.unsatisfy_node(node)
@@ -95,7 +107,6 @@ class YouSupplyAlgo(Solution):
                 else:
                     break
         # TODO: write functionality to change a half excess node into a full excess and fitting node
-        # if deficit is -3, and sink is -5, then sink should be converted to a -2 node and freepool should have a -3 node
 
         if cluster.sources == []:
             print("No sources left in cluster, returning empty cluster")
@@ -164,20 +175,33 @@ class YouSupplyAlgo(Solution):
             path.append(next)
             current = next
 
+        subpaths.append(Path(path[previndex:]))
         return subpaths
     
-    def solve(self):
+    def solve(self,show=False):
         paths:List[Path] = []
         nodes = self.simulation.get_nodes()
-        geo_clusters = self.geographical_cluster(nodes,num_points=self.geo_size)
-
-        for geo_cluster in geo_clusters:
+        self.geographical_cluster(nodes,num_points=self.geo_size)
+        if show:
+            self.plotclusters(self.clusterlist)
+        for geo_cluster in self.clusterlist:
             feas_cluster = self.feasibility_cluster(geo_cluster)
             # print(feas_cluster)
             if feas_cluster.size == 0:
                 continue
             paths = self.create_paths(feas_cluster)
             self.paths.extend(paths)
+
+    def plotclusters(self,clusters:Optional[List[Cluster]]=None):
+        if not clusters:
+            clusters = self.clusterlist
+        # plt.figure(figsize=(10, 10))
+        for cluster in clusters:
+            x = [node.location.x for node in cluster.nodes]
+            y = [node.location.y for node in cluster.nodes]
+            plt.scatter(x, y)
+        plt.show()
+        
 
     def get_unsatisfied_nodes(self):
         return self.simulation.get_unsatisfied_nodes()
@@ -189,9 +213,10 @@ class YouSupplyAlgo(Solution):
         print(f"Total Nodes: {tot_nodes}")
         print(f"Unsatisfied Nodes: {unsat_nodes}")
         print(f"Satisfaction Percentage: {satisfaction_percent:.2f}%")
+        self.metrics["satisfaction_percentage"] = satisfaction_percent
         return satisfaction_percent
 
-    def get_all_metrics(self,out:Optional[str]=None):
+    def get_all_metrics(self,out:Optional[str]=None,name:Optional[str]="YouSupply"):
         tot_dist = self.get_total_distance()
         satisfaction_percent = self.get_satisfaction_metrics()
 
@@ -200,9 +225,9 @@ class YouSupplyAlgo(Solution):
             print(f"Satisfaction Percentage: {satisfaction_percent:.2f}%")
         else:
             with open(out,'a') as f:
-                f.write("YouSupply Algorithm Metrics:\n")
+                f.write(f"{name} Algorithm Metrics:\n")
                 f.write(f"Total Distance of all Paths: {tot_dist}\n")
-                f.write(f"Satisfaction Percentage: {satisfaction_percent:.2f}%\n")
+                f.write(f"Satisfaction Percentage: {satisfaction_percent:.2f}%\n\n")
 
     def get_total_distance(self):
         return super().get_total_distance()

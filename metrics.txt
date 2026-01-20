@@ -1,0 +1,9 @@
+Direct Matching Algorithm Metrics:
+Total Distance of all Paths: 210931.61582948663
+Satisfaction Percentage: 81.40%
+YouSupply Algorithm Metrics:
+Total Distance of all Paths: 8925.927759704857
+Satisfaction Percentage: 86.50%
+Direct Matching Algorithm Metrics:
+Total Distance of all Paths: 19432.746553766618
+Satisfaction Percentage: 53.33%

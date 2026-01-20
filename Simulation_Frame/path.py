@@ -1,4 +1,6 @@
+import pprint
 from typing import Optional,List
+import matplotlib.pyplot as plt
 from .node import Node
 
 class Path:
@@ -30,6 +32,24 @@ class Path:
         ret += f"{UNDERLINE}{self.get_length()}{RESET}\n"
         return ret
     
+    def plotpath(self,color:Optional[str]=None):
+        pprint.pprint(self.nodes)
+        x = [node.location.x for node in self.nodes]
+        y = [node.location.y for node in self.nodes]
+        start_node = self.nodes[0]
+        end_node = self.nodes[-1]
+        color = color if color else "-o"
+        plt.plot(x, y, color)
+        plt.plot(start_node.location.x, start_node.location.y, "go", label="Start Node")
+        plt.plot(end_node.location.x, end_node.location.y, "ro", label="End Node")
+        plt.xlabel("X Position")
+        plt.ylabel("Y Position")
+        plt.title("Path")
+        plt.legend()
+        print(f"Number of nodes in path: {len(self.nodes)}")
+        print(f"Total length of path: {self.get_length()}")
+        plt.show()
+
     def __str__(self):
         return self.__repr__()
     

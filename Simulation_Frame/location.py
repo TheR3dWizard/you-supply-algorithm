@@ -12,5 +12,8 @@ class Location:
     def __repr__(self):
         return f"({self.x},{self.y})"
     
+    def copy(self):
+        return Location(self.x,self.y)
+
     def __str__(self):
         return self.__repr__()

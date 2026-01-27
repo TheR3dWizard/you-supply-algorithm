@@ -11,7 +11,23 @@ class Node:
     def get_distance(self,other) -> float:
         return self.location.get_distance(other.location)
 
-    def __repr__(self):
+    def s_copy(self):
+        new_node = Node(self.item,self.value,self.location.copy())
+        return new_node
+
+    def change_value(self,new_value:int):
+        self.value = new_value
+        self.is_source = new_value > 0
+
+    def split_sink(self,split_value:int):
+        if split_value <= self.value:
+            raise ValueError("Split value must be more than node value for sink")
+        new_node = self.s_copy()
+        new_node.change_value(split_value)
+        self.change_value(self.value - split_value)
+        return new_node
+
+    def __str__(self):
         
         RESET = "\033[0m"
         BOLD = "\033[1m"
@@ -32,5 +48,10 @@ class Node:
             f"{BOLD}{BLUE}Source:{RESET} {source_color}{source_text}{RESET}\n"
         )
 
-    def __str__(self):
-        return self.__repr__()
+    def __repr__(self):
+        return (
+            f"<Item:{self.item}, "
+            f"Value:{self.value}, "
+            f"Location:{self.location}, "
+            f"Source:{self.is_source}>"
+        )

@@ -5,6 +5,8 @@ from collections import defaultdict
 from sklearn.cluster import KMeans, SpectralClustering
 from Simulation_Frame import Solution, Simulation, Node, Path, Cluster
 from Solutions.yousupplyalgo import YouSupplyAlgo
+from random import choice,sample
+from Solutions.yousupplyalgo import YouSupplyAlgo
 from random import choice, sample
 
 
@@ -364,6 +366,7 @@ def genetic_algorithm(cluster: Cluster, generations: int = 150,
 
 
 class GeneticAlgorithm(YouSupplyAlgo):
+class GeneticAlgorithm(YouSupplyAlgo):
     def __init__(self, simulation: Optional[Simulation], 
                  geo_size: int = 50,
                  ga_generations: int = 150,
@@ -387,6 +390,7 @@ class GeneticAlgorithm(YouSupplyAlgo):
 
     def set_simulation(self, simulation):
         return super().set_simulation(simulation)
+    
     
     def geographical_cluster(self, nodes: List[Node], num_points: int = 50) -> List[Cluster]:
         return super().geographical_cluster(nodes=nodes, num_points=num_points)

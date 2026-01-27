@@ -4,6 +4,8 @@ from typing import List, Optional
 from collections import defaultdict
 from sklearn.cluster import KMeans, SpectralClustering
 from Simulation_Frame import Solution, Simulation, Node, Path, Cluster
+from Solutions.yousupplyalgo import YouSupplyAlgo
+from random import choice, sample
 
 
 # function to convert Node objects
@@ -23,109 +25,345 @@ def build_distance_matrix(nodes: List[Node]) -> np.ndarray:
 
 
 # GA utility functions
-def route_distance(route: List[int], source_idx: int, dist_matrix: np.ndarray) -> float:
-    """Compute total round-trip distance for a route starting/ending at source."""
-    if len(route) <= 1:
-        return 0.0
-    # Ensure source is first
-    if route[0] != source_idx:
-        route = [source_idx] + [r for r in route if r != source_idx]
-    dist = 0.0
-    # Distance from source through all nodes
-    for i in range(len(route) - 1):
-        dist += dist_matrix[route[i]][route[i+1]]
-    # Return to source
-    dist += dist_matrix[route[-1]][source_idx]
-    return dist
-
-
-def initial_population(size: int, nodes: List[int], source_idx: int) -> List[List[int]]:
-    """Random population of valid routes with source always first."""
-    pop = []
-    sink_nodes = [n for n in nodes if n != source_idx]
-    for _ in range(size):
-        r = sink_nodes.copy()
-        random.shuffle(r)
-        pop.append([source_idx] + r)
-    return pop
-
-
-def selection(pop: List[List[int]], dist_matrix: np.ndarray, source_idx: int):
-    """Tournament selection."""
-    contenders = random.sample(pop, 3)
-    return min(contenders, key=lambda r: route_distance(r, source_idx, dist_matrix))
-
-
-def rsscx(parent1: List[int], parent2: List[int], source_idx: int, dist_matrix: np.ndarray) -> List[int]:
-    """Random Start Sequential Constructive Crossover - source stays first."""
-    n = len(parent1)
-    offspring = [source_idx]
-    visited = {source_idx}
+def path_fitness(path: Path) -> float:
+    """
+    Proper fitness function evaluating different metrics for a path.
     
-    # Remove source from parents for processing
-    p1_sinks = [x for x in parent1 if x != source_idx]
-    p2_sinks = [x for x in parent2 if x != source_idx]
+    Metrics considered:
+    - Total distance traveled
+    - Number of unsatisfied nodes (penalty)
+    - Capacity violations (penalty)
+    """
+    distance = path.get_total_distance()
     
-    while len(offspring) < n:
-        last = offspring[-1]
-        # Find next nodes in parents
-        if last in p1_sinks:
-            i1 = p1_sinks.index(last)
-            next1 = p1_sinks[(i1 + 1) % len(p1_sinks)] if len(p1_sinks) > 0 else None
-        else:
-            next1 = None
+    # Penalty for capacity violations
+    capacity_penalty = 0
+    inventory = defaultdict(int)
+    for node in path.nodes:
+        inventory[node.item] += node.value
+        # If inventory goes negative, we have a capacity violation
+        if inventory[node.item] < 0:
+            capacity_penalty += abs(inventory[node.item]) * 1000  # Heavy penalty
+    
+    # Penalty for unsatisfied sinks (nodes that couldn't be visited)
+    unsatisfied_penalty = 0
+    
+    # Total fitness 
+    fitness = distance + capacity_penalty + unsatisfied_penalty
+    return fitness
+
+
+def route_distance_with_path(path: Path) -> float:
+    """Compute total round-trip distance using Path object."""
+    return path.get_total_distance()
+
+
+def initial_population_from_cluster(cluster: Cluster, pop_size: int) -> List[Path]:
+    """
+    Generate initial population of paths using YouSupply logic.
+    Each path starts from a source and visits sinks in a feasible order.
+    """
+    population = []
+    
+    for i in range(pop_size):
+        visited = set()
+        inventory = defaultdict(int)
+        
+        # Start with a random source
+        start_source = random.choice(cluster.sources)
+        path = Path()
+        path.add_node(start_source)
+        visited.add(start_source)
+        inventory[start_source.item] += start_source.value
+        
+        # Build the path
+        while len(visited) < cluster.size:
+            current = path.get_end()
             
-        if last in p2_sinks:
-            i2 = p2_sinks.index(last)
-            next2 = p2_sinks[(i2 + 1) % len(p2_sinks)] if len(p2_sinks) > 0 else None
-        else:
-            next2 = None
+            # Find feasible sinks (those we have inventory to satisfy)
+            feasible_sinks = [
+                node for node in cluster.sinks 
+                if node not in visited and 
+                node.item in inventory and 
+                inventory[node.item] >= abs(node.value)
+            ]
             
-        choices = [c for c in [next1, next2] if c is not None and c not in visited]
-        if choices:
-            next_city = min(choices, key=lambda c: dist_matrix[last][c])
-        else:
-            unvisited = [c for c in p1_sinks if c not in visited]
-            if unvisited:
-                next_city = min(unvisited, key=lambda c: dist_matrix[last][c])
+            # Find unvisited sources
+            unvisited_sources = [
+                node for node in cluster.sources 
+                if node not in visited
+            ]
+            
+            # Combine possibilities
+            possibilities = feasible_sinks + unvisited_sources
+            
+            if not possibilities:
+                # If no feasible moves, try to find nearest unvisited node
+                unvisited = [n for n in cluster.sources + cluster.sinks if n not in visited]
+                if unvisited:
+                    # Pick nearest unvisited node
+                    possibilities = [min(unvisited, key=lambda n: current.get_distance(n))]
+                else:
+                    break
+            
+            # Choose next node (random for diversity, can be made more sophisticated)
+            if random.random() < 0.7 and feasible_sinks:
+                # Prefer feasible sinks 70% of the time
+                next_node = random.choice(feasible_sinks)
             else:
-                break
-        offspring.append(next_city)
-        visited.add(next_city)
+                next_node = random.choice(possibilities)
+            
+            path.add_node(next_node)
+            visited.add(next_node)
+            inventory[next_node.item] += next_node.value
+        
+        population.append(path)
+    
+    return population
+
+
+def selection_with_paths(population: List[Path]) -> Path:
+    """Tournament selection using Path objects and fitness function."""
+    contenders = random.sample(population, min(3, len(population)))
+    return min(contenders, key=lambda p: path_fitness(p))
+
+
+def crossover_paths(parent1: Path, parent2: Path, cluster: Cluster) -> Path:
+    """
+    Crossover operation for Path objects.
+    Creates offspring by combining segments from both parents while maintaining feasibility.
+    """
+    # Extract node sequences 
+    p1_nodes = parent1.nodes.copy()
+    p2_nodes = parent2.nodes.copy()
+    
+    # Start with a random source from either parent
+    sources = [n for n in p1_nodes + p2_nodes if n in cluster.sources]
+    if sources:
+        start_source = random.choice(sources)
+    else:
+        start_source = random.choice(cluster.sources)
+    
+    offspring = Path()
+    offspring.add_node(start_source)
+    visited = {start_source}
+    inventory = defaultdict(int)
+    inventory[start_source.item] = start_source.value
+    
+    # Alternate between parents for choosing next nodes
+    parents = [p1_nodes, p2_nodes]
+    parent_idx = 0
+    
+    max_iterations = cluster.size * 2  # Prevent infinite loops
+    iterations = 0
+    
+    while len(visited) < cluster.size and iterations < max_iterations:
+        iterations += 1
+        current = offspring.get_end()
+        
+        # Try to find next node from current parent
+        current_parent = parents[parent_idx]
+        
+        # Find position of current node in parent
+        try:
+            current_pos = current_parent.index(current)
+            # Look at next few nodes in parent
+            candidates = []
+            for j in range(1, min(4, len(current_parent))):
+                next_idx = (current_pos + j) % len(current_parent)
+                candidate = current_parent[next_idx]
+                if candidate not in visited:
+                    candidates.append(candidate)
+            
+            # Filter for feasible candidates
+            feasible = []
+            for cand in candidates:
+                if cand in cluster.sources:
+                    feasible.append(cand)
+                elif cand.item in inventory and inventory[cand.item] >= abs(cand.value):
+                    feasible.append(cand)
+            
+            if feasible:
+                next_node = min(feasible, key=lambda n: current.get_distance(n))
+            else:
+                # No feasible from this parent, try other parent
+                parent_idx = 1 - parent_idx
+                continue
+                
+        except (ValueError, IndexError):
+            # Current not in parent or error, switch parent
+            parent_idx = 1 - parent_idx
+            continue
+        
+        # Add node to offspring
+        offspring.add_node(next_node)
+        visited.add(next_node)
+        inventory[next_node.item] += next_node.value
+        
+        # Switch parent for next iteration
+        parent_idx = 1 - parent_idx
+    
+    # Fill remaining nodes if needed
+    while len(visited) < cluster.size:
+        current = offspring.get_end()
+        unvisited = [n for n in cluster.sources + cluster.sinks if n not in visited]
+        
+        if not unvisited:
+            break
+        
+        # Prefer feasible sinks, then sources, then any
+        feasible_sinks = [
+            n for n in unvisited 
+            if n in cluster.sinks and 
+            n.item in inventory and 
+            inventory[n.item] >= abs(n.value)
+        ]
+        
+        if feasible_sinks:
+            next_node = min(feasible_sinks, key=lambda n: current.get_distance(n))
+        else:
+            next_node = min(unvisited, key=lambda n: current.get_distance(n))
+        
+        offspring.add_node(next_node)
+        visited.add(next_node)
+        inventory[next_node.item] += next_node.value
+    
     return offspring
 
 
-def mutate(route: List[int], source_idx: int, prob: float = 0.1) -> List[int]:
-    """Swap mutation - never move the source."""
-    if random.random() < prob and len(route) > 2:
-        # Only swap sink nodes (indices 1 onwards)
-        i, j = random.sample(range(1, len(route)), 2)
-        route[i], route[j] = route[j], route[i]
-    return route
+def mutate_path(path: Path, cluster: Cluster, prob: float = 0.1) -> Path:
+    """
+    Mutation operator for Path objects.
+    
+    Strategy:
+    - Can swap consecutive sinks (that don't violate capacity constraints)
+    - Can reorder sources (which requires recomputing path segments)
+    - Uses small probability to maintain diversity
+    """
+    if random.random() > prob or len(path.nodes) <= 2:
+        return path
+    
+    # Choose mutation type
+    mutation_type = random.choice(['swap_sinks', 'reorder_sources', 'insert_source'])
+    
+    if mutation_type == 'swap_sinks':
+        # Swap two consecutive sinks if capacity allows
+        sink_positions = [i for i, node in enumerate(path.nodes) if node in cluster.sinks]
+        
+        if len(sink_positions) >= 2:
+            # Find consecutive sinks
+            consecutive_pairs = []
+            for i in range(len(sink_positions) - 1):
+                pos1, pos2 = sink_positions[i], sink_positions[i + 1]
+                # Check if they're in same segment (between same sources)
+                # Simple check: if no source between them
+                has_source_between = any(
+                    path.nodes[j] in cluster.sources 
+                    for j in range(pos1 + 1, pos2)
+                )
+                if not has_source_between:
+                    consecutive_pairs.append((pos1, pos2))
+            
+            if consecutive_pairs:
+                pos1, pos2 = random.choice(consecutive_pairs)
+                # Swap
+                path.nodes[pos1], path.nodes[pos2] = path.nodes[pos2], path.nodes[pos1]
+    
+    elif mutation_type == 'reorder_sources':
+        # Change position of a source (requires path reconstruction)
+        source_positions = [i for i, node in enumerate(path.nodes) if node in cluster.sources]
+        
+        if len(source_positions) >= 2:
+            # Pick a source to move
+            src_idx = random.choice(source_positions)
+            source_node = path.nodes[src_idx]
+            
+            # Remove it
+            new_nodes = [n for i, n in enumerate(path.nodes) if i != src_idx]
+            
+            # Insert at random new position
+            new_pos = random.randint(0, len(new_nodes))
+            new_nodes.insert(new_pos, source_node)
+            
+            # Rebuild path with YouSupply logic to ensure feasibility
+            mutated_path = Path()
+            visited = set()
+            inventory = defaultdict(int)
+            
+            for node in new_nodes:
+                if node not in visited:
+                    mutated_path.add_node(node)
+                    visited.add(node)
+                    inventory[node.item] += node.value
+            
+            return mutated_path
+    
+    elif mutation_type == 'insert_source':
+        # Try to insert an unvisited source if any exist
+        unvisited_sources = [s for s in cluster.sources if s not in path.nodes]
+        
+        if unvisited_sources:
+            new_source = random.choice(unvisited_sources)
+            insert_pos = random.randint(0, len(path.nodes))
+            path.nodes.insert(insert_pos, new_source)
+    
+    return path
 
 
-def genetic_algorithm(nodes: List[int], source_idx: int, dist_matrix: np.ndarray, 
-                      generations: int = 150, pop_size: int = 30, 
-                      mutation_rate: float = 0.1) -> List[int]:
-    """GA route optimization for one source - enforces source at start/end."""
-    population = initial_population(pop_size, nodes, source_idx)
-    best = min(population, key=lambda r: route_distance(r, source_idx, dist_matrix))
-
+def genetic_algorithm(cluster: Cluster, generations: int = 150, 
+                                 pop_size: int = 30, mutation_rate: float = 0.1) -> Path:
+    
+    # Initialize population
+    population = initial_population_from_cluster(cluster, pop_size)
+    
+    # Track best solution
+    best = min(population, key=lambda p: path_fitness(p))
+    best_fitness = path_fitness(best)
+    
+    stagnation_counter = 0
+    max_stagnation = 30
+    
     for gen in range(generations):
-        new_pop = []
-        for _ in range(pop_size):
-            p1, p2 = selection(population, dist_matrix, source_idx), selection(population, dist_matrix, source_idx)
-            child = rsscx(p1, p2, source_idx, dist_matrix)
-            child = mutate(child, source_idx, mutation_rate)
-            new_pop.append(child)
-        population = new_pop
-        current_best = min(population, key=lambda r: route_distance(r, source_idx, dist_matrix))
-        if route_distance(current_best, source_idx, dist_matrix) < route_distance(best, source_idx, dist_matrix):
+        new_population = []
+        
+        # Elitism: keep best solution
+        new_population.append(best)
+        
+        # Generate rest of population
+        while len(new_population) < pop_size:
+            # Selection
+            parent1 = selection_with_paths(population)
+            parent2 = selection_with_paths(population)
+            
+            # Crossover
+            offspring = crossover_paths(parent1, parent2, cluster)
+            
+            # Mutation
+            offspring = mutate_path(offspring, cluster, mutation_rate)
+            
+            new_population.append(offspring)
+        
+        population = new_population
+        
+        # Update best
+        current_best = min(population, key=lambda p: path_fitness(p))
+        current_fitness = path_fitness(current_best)
+        
+        if current_fitness < best_fitness:
             best = current_best
+            best_fitness = current_fitness
+            stagnation_counter = 0
+        else:
+            stagnation_counter += 1
+        
+        # Early stopping if stagnated
+        if stagnation_counter >= max_stagnation:
+            break
+    
     return best
 
 
-class GeneticAlgorithm(Solution):
+class GeneticAlgorithm(YouSupplyAlgo):
     def __init__(self, simulation: Optional[Simulation], 
                  geo_size: int = 50,
                  ga_generations: int = 150,
@@ -139,6 +377,7 @@ class GeneticAlgorithm(Solution):
         self.ga_pop_size = ga_pop_size
         self.ga_mutation_rate = ga_mutation_rate
         self.name = name
+        self.clusterlist:List[Cluster] = []
         self.metrics = {
             "algorithm_name": name,
             "total_distance": 0,
@@ -148,39 +387,11 @@ class GeneticAlgorithm(Solution):
 
     def set_simulation(self, simulation):
         return super().set_simulation(simulation)
-
+    
     def geographical_cluster(self, nodes: List[Node], num_points: int = 50) -> List[Cluster]:
-        """Cluster nodes geographically using SpectralClustering."""
-        cluster_list: List[Cluster] = []
-        
-        spc = SpectralClustering(
-            n_clusters=self.simulation.size // num_points if self.simulation.size // num_points != 0 else 1,
-            random_state=42,
-            affinity="nearest_neighbors",
-        )
-        
-        positions = []
-        for node in nodes:
-            positions.append(node.location.to_tuple())
-        
-        spc.fit(positions)
-        cluster_labels = spc.labels_
-        clusters = defaultdict(list)
-        
-        for i, label in enumerate(cluster_labels):
-            clusters[label].append(self.simulation.get_nodes()[i])
-        
-        for cluster_nodes in clusters.values():
-            cluster = Cluster(nodes=[])
-            for node in cluster_nodes:
-                if not node.is_source:
-                    cluster.add_sink(node)
-                else:
-                    cluster.add_source(node)
-            cluster_list.append(cluster)
-        
-        return cluster_list
+        return super().geographical_cluster(nodes=nodes, num_points=num_points)
 
+    
     def assign_sinks_to_sources(self, cluster: Cluster) -> dict:
         """Assign sinks to sources using KMeans clustering with capacity constraints."""
         if not cluster.sources or not cluster.sinks:
@@ -233,6 +444,7 @@ class GeneticAlgorithm(Solution):
         
         return capacity_aware_assignments
 
+
     def solve(self) -> List[Path]:
         """Main solve method that runs GA optimization with source/sink and capacity constraints."""
         if not self.simulation:
@@ -245,53 +457,26 @@ class GeneticAlgorithm(Solution):
         # Step 1: Geographical clustering
         geo_clusters = self.geographical_cluster(nodes, num_points=self.geo_size)
         
-        # Step 2: For each cluster, assign sinks to sources and optimize routes
+        # Step 2: For each cluster, optimize using GA with Path objects
         for cluster in geo_clusters:
             if not cluster.sources or not cluster.sinks:
                 continue
             
-            # Assign sinks to sources
-            assignments = self.assign_sinks_to_sources(cluster)
             
-            # Build distance matrix for this cluster (all nodes: sources + sinks)
-            all_cluster_nodes = cluster.sources + cluster.sinks
-            node_to_index = {node: idx for idx, node in enumerate(all_cluster_nodes)}
-            dist_matrix = build_distance_matrix(all_cluster_nodes)
+            # Initialize population 
+            optimized_path = genetic_algorithm(
+                cluster,
+                generations=self.ga_generations,
+                pop_size=self.ga_pop_size,
+                mutation_rate=self.ga_mutation_rate
+            )
             
-            # Step 3: Run GA for each source
-            for source_node, assigned_sinks in assignments.items():
-                if not assigned_sinks:
-                    continue
-                
-                source_idx = node_to_index[source_node]
-                sink_indices = [node_to_index[sink] for sink in assigned_sinks]
-                route_node_indices = [source_idx] + sink_indices
-                
-                # Run GA with source constraint
-                best_route_indices = genetic_algorithm(
-                    route_node_indices, 
-                    source_idx,
-                    dist_matrix,
-                    generations=self.ga_generations,
-                    pop_size=self.ga_pop_size,
-                    mutation_rate=self.ga_mutation_rate
-                )
-                
-                # Ensure route starts and ends at source
-                if best_route_indices[0] != source_idx:
-                    best_route_indices = [source_idx] + [r for r in best_route_indices if r != source_idx]
-                if best_route_indices[-1] != source_idx:
-                    best_route_indices.append(source_idx)
-                
-                # Convert indices back to Node objects
-                route_nodes = [all_cluster_nodes[idx] for idx in best_route_indices]
-                
-                # Create path and mark nodes as satisfied
-                path = Path(nodes=route_nodes)
-                self.paths.append(path)
-                
-                for node in route_nodes:
-                    self.simulation.satisfy_node(node)
+            # Add optimized path to solution
+            self.paths.append(optimized_path)
+            
+            # Mark nodes as satisfied
+            for node in optimized_path.nodes:
+                self.simulation.satisfy_node(node)
         
         return self.paths
 

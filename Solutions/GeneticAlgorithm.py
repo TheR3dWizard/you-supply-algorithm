@@ -9,23 +9,6 @@ from random import choice,sample
 from Solutions.yousupplyalgo import YouSupplyAlgo
 from random import choice, sample
 
-
-# function to convert Node objects
-def nodes_to_positions(nodes: List[Node]) -> np.ndarray:
-    """Convert list of Node objects to numpy array of positions."""
-    return np.array([node.location.to_tuple() for node in nodes])
-
-
-def build_distance_matrix(nodes: List[Node]) -> np.ndarray:
-    """Build distance matrix from Node objects."""
-    N = len(nodes)
-    dist_matrix = np.zeros((N, N))
-    for i in range(N):
-        for j in range(N):
-            dist_matrix[i][j] = nodes[i].get_distance(nodes[j])
-    return dist_matrix
-
-
 # GA utility functions
 def path_fitness(path: Path) -> float:
     """
@@ -36,7 +19,7 @@ def path_fitness(path: Path) -> float:
     - Number of unsatisfied nodes (penalty)
     - Capacity violations (penalty)
     """
-    distance = path.get_total_distance()
+    distance = path.get_length()
     
     # Penalty for capacity violations
     capacity_penalty = 0
@@ -53,11 +36,6 @@ def path_fitness(path: Path) -> float:
     # Total fitness 
     fitness = distance + capacity_penalty + unsatisfied_penalty
     return fitness
-
-
-def route_distance_with_path(path: Path) -> float:
-    """Compute total round-trip distance using Path object."""
-    return path.get_total_distance()
 
 
 def initial_population_from_cluster(cluster: Cluster, pop_size: int) -> List[Path]:
@@ -99,6 +77,7 @@ def initial_population_from_cluster(cluster: Cluster, pop_size: int) -> List[Pat
             # Combine possibilities
             possibilities = feasible_sinks + unvisited_sources
             
+            # Pretty sure this is impossible 
             if not possibilities:
                 # If no feasible moves, try to find nearest unvisited node
                 unvisited = [n for n in cluster.sources + cluster.sinks if n not in visited]
@@ -288,6 +267,7 @@ def mutate_path(path: Path, cluster: Cluster, prob: float = 0.1) -> Path:
             new_nodes.insert(new_pos, source_node)
             
             # Rebuild path with YouSupply logic to ensure feasibility
+            #TODO after source is put in a different place, the path needs to be checked for feasibility and if its not feasible then we need to rewrite the path from that point
             mutated_path = Path()
             visited = set()
             inventory = defaultdict(int)
@@ -300,6 +280,7 @@ def mutate_path(path: Path, cluster: Cluster, prob: float = 0.1) -> Path:
             
             return mutated_path
     
+    # Pretty sure this is impossible
     elif mutation_type == 'insert_source':
         # Try to insert an unvisited source if any exist
         unvisited_sources = [s for s in cluster.sources if s not in path.nodes]
@@ -394,59 +375,6 @@ class GeneticAlgorithm(YouSupplyAlgo):
     def geographical_cluster(self, nodes: List[Node], num_points: int = 50) -> List[Cluster]:
         return super().geographical_cluster(nodes=nodes, num_points=num_points)
 
-    
-    def assign_sinks_to_sources(self, cluster: Cluster) -> dict:
-        """Assign sinks to sources using KMeans clustering with capacity constraints."""
-        if not cluster.sources or not cluster.sinks:
-            return {}
-        
-        # Get positions
-        source_positions = nodes_to_positions(cluster.sources)
-        sink_positions = nodes_to_positions(cluster.sinks)
-        
-        n_sources = len(cluster.sources)
-        n_sinks = len(cluster.sinks)
-        
-        # Map sink indices to source indices
-        assignments = defaultdict(list)
-        
-        # If more sources than sinks, assign each sink to nearest source directly
-        if n_sources > n_sinks:
-            for sink_idx, sink_node in enumerate(cluster.sinks):
-                sink_pos = sink_positions[sink_idx]
-                # Find nearest source
-                min_dist = float('inf')
-                nearest_source_idx = 0
-                for source_idx, source_pos in enumerate(source_positions):
-                    dist = np.linalg.norm(sink_pos - source_pos)
-                    if dist < min_dist:
-                        min_dist = dist
-                        nearest_source_idx = source_idx
-                assignments[cluster.sources[nearest_source_idx]].append(sink_node)
-        else:
-            # KMeans clustering: assign sinks to nearest source
-            kmeans = KMeans(n_clusters=n_sources, random_state=0).fit(sink_positions)
-            
-            for sink_idx, label in enumerate(kmeans.labels_):
-                sink_node = cluster.sinks[sink_idx]
-                source_node = cluster.sources[label]
-                assignments[source_node].append(sink_node)
-        
-        # Apply capacity constraints - split assignments if capacity exceeded
-        capacity_aware_assignments = defaultdict(list)
-        for source_node, assigned_sinks in assignments.items():
-            source_capacity = abs(source_node.value)  # Capacity is absolute value
-            current_demand = 0
-            
-            for sink_node in assigned_sinks:
-                sink_demand = abs(sink_node.value)  # Demand is absolute value
-                if current_demand + sink_demand <= source_capacity:
-                    capacity_aware_assignments[source_node].append(sink_node)
-                    current_demand += sink_demand
-                # If capacity exceeded, sink remains unassigned (will be handled separately)
-        
-        return capacity_aware_assignments
-
 
     def solve(self) -> List[Path]:
         """Main solve method that runs GA optimization with source/sink and capacity constraints."""
@@ -465,6 +393,7 @@ class GeneticAlgorithm(YouSupplyAlgo):
             if not cluster.sources or not cluster.sinks:
                 continue
             
+            cluster = self.feasibility_cluster(cluster)
             
             # Initialize population 
             optimized_path = genetic_algorithm(

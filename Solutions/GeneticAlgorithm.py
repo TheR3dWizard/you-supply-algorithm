@@ -366,7 +366,6 @@ def genetic_algorithm(cluster: Cluster, generations: int = 150,
 
 
 class GeneticAlgorithm(YouSupplyAlgo):
-class GeneticAlgorithm(YouSupplyAlgo):
     def __init__(self, simulation: Optional[Simulation], 
                  geo_size: int = 50,
                  ga_generations: int = 150,

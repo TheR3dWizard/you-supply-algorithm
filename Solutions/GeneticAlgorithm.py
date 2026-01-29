@@ -225,7 +225,9 @@ def mutate_path(path: Path, cluster: Cluster, prob: float = 0.1) -> Path:
         return path
     
     # Choose mutation type
-    mutation_type = random.choice(['swap_sinks', 'reorder_sources', 'insert_source'])
+    mutation_type = random.choice(['swap_sinks', 'reorder_sources', 'insert_source',
+                                #    'shuffle_sinks'
+                                   ])
     
     if mutation_type == 'swap_sinks':
         # Swap two consecutive sinks if capacity allows
@@ -290,6 +292,35 @@ def mutate_path(path: Path, cluster: Cluster, prob: float = 0.1) -> Path:
             insert_pos = random.randint(0, len(path.nodes))
             path.nodes.insert(insert_pos, new_source)
     
+    elif mutation_type == 'shuffle_sinks':
+        sink_windows:List[tuple[int,int]] = []
+        nodes = path.nodes
+        l,r = 0,1
+        while r < len(nodes):
+            if nodes[l].is_source: #window has to start with sinks
+                l += 1
+                r += 1
+                continue
+
+            if nodes[r].is_source:
+                if l == r-1: #only one node in window
+                    l += 1
+                    r += 1
+                    continue
+                sink_windows.append((l,r-1)) 
+                l += 1
+                r += 1
+                continue
+            
+            r += 1
+        
+        window = random.choice(sink_windows)
+        random.shuffle(window)
+
+
+
+
+
     return path
 
 
@@ -341,6 +372,7 @@ def genetic_algorithm(cluster: Cluster, generations: int = 150,
         
         # Early stopping if stagnated
         if stagnation_counter >= max_stagnation:
+            print(f"Ended due to stagnation after {gen} generations")
             break
     
     return best

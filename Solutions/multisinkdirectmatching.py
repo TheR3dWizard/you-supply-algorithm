@@ -1,6 +1,6 @@
 from collections import defaultdict
 from typing import List,Optional
-from Simulation_Frame import Path,Simulation,Solution
+from Simulation_Frame import Path,Simulation,Solution,Node
 from .DirectMatching import DirectMatching
 
 class MultiSinkDirectMatching(DirectMatching):
@@ -19,7 +19,6 @@ class MultiSinkDirectMatching(DirectMatching):
         sink_items = set()
 
         paths = []
-        visited = set()
 
         for node in nodes:
             if node.is_source:
@@ -29,41 +28,35 @@ class MultiSinkDirectMatching(DirectMatching):
                 sink_nodes[node.item].append(node)
                 sink_items.add(node.item)
 
-        # function to get the closest node
-        closest = lambda node, possibilities: min(
-            [(node.get_distance(_), _) for _ in possibilities if _ not in visited],
-            key=lambda x: x[0],
-        )
 
         for item in source_nodes.keys():
-            for source in source_nodes[item]:
-                available = source.value
-                while available > 0:
-                    pass
+            sinks = sink_nodes[item]
+            min_sink = min(sinks,key= lambda x: abs(x.value)).value
+            sources:List[Node] = source_nodes[item]
+            for source in sources:
+                path = Path([source])
+                amount_left = source.value
+                closest_sinks = sorted(sinks,key=lambda x:source.get_distance(x))
+                for sink in closest_sinks:
+                    if self.simulation.is_node_satisfied(sink):
+                        continue
+                    val = abs(sink.value)
+                    if val <= amount_left:
+                        path.add_node(sink)
+                        self.simulation.satisfy_node(sink)
+                        amount_left -= val
 
-
-        for item in source_nodes.keys():
-            available = sink_nodes[item]
-            for source_node in source_nodes[item]:
-                size = source_node.value
-                fill_size = 0
-                sink_node = None
-                possibilities = set()
-                #select suitable sink node
-                for sink_node_cand in available:
-                    if abs(sink_node_cand.value) < size:
-                        possibilities.add(sink_node_cand)
-                if len(possibilities) == 0 or len(possibilities-visited) == 0:
+                    if amount_left < min_sink:
+                        break
+                
+                if len(path.nodes) == 1: #No sinks
                     continue
-                _,sink_node = closest(source_node,possibilities)
-                visited.add(sink_node)
-
-                self.simulation.satisfy_node(source_node)
-                self.simulation.satisfy_node(sink_node)
-                path = Path(nodes=[source_node,sink_node])
+                self.simulation.satisfy_node(source)
                 paths.append(path)
+        
         self.paths = paths
         return paths
 
+                
         
     

@@ -27,6 +27,9 @@ class Node:
         self.change_value(self.value - split_value)
         return new_node
 
+    def unpack(self):
+        return self.item,self.value 
+
     def __str__(self):
         
         RESET = "\033[0m"

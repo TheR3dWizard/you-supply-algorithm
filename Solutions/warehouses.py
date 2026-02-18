@@ -4,13 +4,13 @@ import matplotlib.pyplot as plt
 
 
 class Warehouses(Solution):
-    def __init__(self,simulation:Optional[Simulation],name:Optional[str]="Warehouses"):
+    def __init__(self,simulation:Optional[Simulation],name:Optional[str]="Warehouses",range:Optional[int]=2500):
         self.paths = []
         self.source_paths = []
         self.sink_paths = []
         self.simulation = simulation if simulation else None
         self.name = name
-        self.range = 2500
+        self.range = range
         self.driver_capacity = 50
         self.metrics = {
             "algorithm_name":name,
@@ -22,17 +22,21 @@ class Warehouses(Solution):
     def solve(self,show=False):
         paths:List[Path] = []
         center = self.simulation.area/2
-        warehouse:Warehouse = Warehouse([],Location(center,center)) #set it at the center of the map (just a placeholder for now)
+        # warehouse:Warehouse = Warehouse([],Location(center,center)) #set it at the center of the map (just a placeholder for now)
         nodes = self.simulation.get_nodes()
 
+
+        #set mutliple warehouses 
         warehouses:List[Warehouse] = []
         x,y = 0,0
         area = self.simulation.area
         while x <= area:
-            warehouses.append(Warehouse([],Location(x,y)))
-            x += self.range
-            y += self.range
-
+            while y <= area:
+                warehouses.append(Warehouse([],Location(x,y)))
+                y += 2*self.range
+            x += 2*self.range
+            y = 0
+        self.warehouses = warehouses
 
 
         #fill warehouse with all the sources
@@ -66,9 +70,9 @@ class Warehouses(Solution):
                         self.simulation.satisfy_node(source)
                         path.add_node(source)
                         
-                
-                path.add_node(warehouse)
-                warehouse.add_inventory(driver.inventory)
+                closest_warehouse = min(warehouses,key=lambda x:driver.location.get_distance(x.location))
+                path.add_node(closest_warehouse)
+                closest_warehouse.add_inventory(driver.inventory)
                 paths.append(path)
                 self.source_paths.append(path)
         
@@ -77,23 +81,24 @@ class Warehouses(Solution):
         
         #from warehouse, create all the different Drivers
         sink_drivers:List[Driver] = []
-        inventory = warehouse.inventory
-        while not inventory.is_empty():
-            driver = Driver(self.driver_capacity)
-            for item in inventory.get_items():
-                if driver.is_full():
-                    break
-                available = inventory.get_amount(item)
-                if available <= driver.get_remaining_capacity():
-                    driver.add_item(item,available)
-                    inventory.remove_item(item,available)
-                    continue
-                else:
-                    add_amt = driver.get_remaining_capacity()
-                    driver.add_item(item,add_amt)
-                    inventory.remove_item(item,add_amt)
-                    break
-            sink_drivers.append(driver)
+        for warehouse in warehouses:
+            inventory = warehouse.inventory
+            while not inventory.is_empty():
+                driver = Driver(self.driver_capacity,location=warehouse.location)
+                for item in inventory.get_items():
+                    if driver.is_full():
+                        break
+                    available = inventory.get_amount(item)
+                    if available <= driver.get_remaining_capacity():
+                        driver.add_item(item,available)
+                        inventory.remove_item(item,available)
+                        continue
+                    else:
+                        add_amt = driver.get_remaining_capacity()
+                        driver.add_item(item,add_amt)
+                        inventory.remove_item(item,add_amt)
+                        break
+                sink_drivers.append(driver)
 
         # if show:
         #     for driver in sink_drivers:
@@ -103,8 +108,9 @@ class Warehouses(Solution):
         sinks = list(filter(lambda x: not x.is_source,nodes))
         for driver in sink_drivers:
             path = Path()
-            path.add_node(warehouse)
-            driver.set_location(warehouse.location)
+            closest_warehouse = min(warehouses,key=lambda x:driver.location.get_distance(x.location))
+            path.add_node(closest_warehouse)
+            driver.set_location(closest_warehouse.location)
             items = driver.get_items()
             for item in items:
                 amount_left = driver.get_amount(item)
@@ -180,11 +186,15 @@ class Warehouses(Solution):
         """
         # plt.figure(figsize=(10, 10))
 
+        warehouse_x = [warehouse.location.x for warehouse in self.warehouses]
+        warehouse_y = [warehouse.location.y for warehouse in self.warehouses]
+
         colors = plt.colormaps.get_cmap('hsv').resampled(len(self.source_paths) + 1)
         for i, path in enumerate(self.source_paths):
             x = [node.location.x for node in path.nodes]
             y = [node.location.y for node in path.nodes]
             plt.plot(x, y, color=colors(i), label=f'Path {i+1}')
+        plt.scatter(warehouse_x,warehouse_y,s=200,marker='o',edgecolors='white',linewidths=1.5,label='Warehouses')
         plt.xlabel("X Position")
         plt.ylabel("Y Position")
         plt.title("All Paths")
@@ -196,6 +206,7 @@ class Warehouses(Solution):
             x = [node.location.x for node in path.nodes]
             y = [node.location.y for node in path.nodes]
             plt.plot(x, y, color=colors(i), label=f'Path {i+1}')
+        plt.scatter(warehouse_x,warehouse_y,s=200,marker='o',edgecolors='white',linewidths=1.5,label='Warehouses')
         plt.xlabel("X Position")
         plt.ylabel("Y Position")
         plt.title("All Paths")

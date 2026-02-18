@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 class Solution(ABC):
 
-    @abstractmethod
+    # @abstractmethod
     def set_simulation(self,simulation) -> None:
         self.simulation = simulation
 
@@ -15,7 +15,7 @@ class Solution(ABC):
     def solve(self) -> List[Path]:
         pass
 
-    @abstractmethod
+    # @abstractmethod
     def get_total_distance(self) -> float:
         tot_dist = 0.0
         for path in self.paths:

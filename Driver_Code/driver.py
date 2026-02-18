@@ -1,6 +1,6 @@
 from Simulation_Frame import Simulation
 from Simulation_Frame.OSMRouter import init_graph,get_bounding_box
-from Solutions import DirectMatching,YouSupplyAlgo,OptimizedDirectMatching,GeneticAlgorithm,MultiSinkDirectMatching,Warehouse
+from Solutions import DirectMatching,YouSupplyAlgo,OptimizedDirectMatching,GeneticAlgorithm,MultiSinkDirectMatching,Warehouses
 
 open("metrics.txt","w").close()
 init_graph(center_point=(10.991343783982689, 77.0044269727586), dist=5000)

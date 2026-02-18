@@ -16,9 +16,12 @@ class Driver:
             return True
         return False
     
-    def add_item(self,item,value,weight=1):
+    def add_item(self,item,value,weight=1,node:Optional[Node]=None):
         if self.can_add(item,value,weight):
             self.inventory.add_item(item,value,weight)
+        if node:
+            self.set_location(node.location)
+        
 
     def can_add_node(self,node:Node,weight = 1):
         item,value = node.unpack()
@@ -28,6 +31,7 @@ class Driver:
     def add_node(self,node:Node):
         if self.can_add_node(node):
             self.inventory.add_node(node)
+        self.set_location(node.location)
 
     def get_items(self):
         return self.inventory.get_items()
@@ -36,6 +40,9 @@ class Driver:
         if not self.inventory.get_amount() >= value:
             raise ValueError(f"Removing more of {item} than what is present (Tried to remove f{value})")
         self.inventory.remove_item(item,value) 
+
+    def set_location(self,location:Location):
+        self.location = location
 
     def copy(self):
         return Driver(self.capacity) 

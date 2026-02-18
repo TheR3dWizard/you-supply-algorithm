@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 class Simulation:
     def __init__(self,area:int,size:int,range:int,items:List[str]=None):
-        self.nodes = []
+        self.nodes:List[Node] = []
         self.satisfied_nodes = []
         self.area = area
         self.size = size
@@ -79,6 +79,21 @@ class Simulation:
         plt.ylabel("Y Position")
         plt.title("Nodes in Simulation")
         plt.show()
+
+    def all_nodes_satisfied(self,sources=False,sinks=False):
+        if sources:
+            sources = list(filter(lambda x: x.is_source,self.nodes))
+            for source in sources:
+                if not self.is_node_satisfied(source):
+                    return False
+        if sinks:
+            sinks = list(filter(lambda x: not x.is_source,self.nodes))
+            for sink in sinks:
+                if not self.is_node_satisfied(sink):
+                    return False
+        return True
+
+
 
     def __repr__(self):
         size = len(self.nodes)

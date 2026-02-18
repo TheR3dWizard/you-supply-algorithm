@@ -29,6 +29,11 @@ class Node:
 
     def unpack(self):
         return self.item,self.value 
+    
+    def reduce_source(self,new_amount):
+        if not self.is_source:
+            raise TypeError("Node is a sink, not a source")
+        self.value = new_amount
 
     def __str__(self):
         

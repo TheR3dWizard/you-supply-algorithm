@@ -41,6 +41,11 @@ class Warehouse(Node):
             return False
         return True
     
+    def add_inventory(self,inventory:Inventory):
+        for item in inventory.get_items():
+            value = inventory.get_amount(item)
+            self.inventory.add_item(item,value)
+
     def is_empty(self):
         return self.inventory.is_empty()
 

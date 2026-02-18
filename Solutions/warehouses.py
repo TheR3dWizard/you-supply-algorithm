@@ -1,4 +1,3 @@
-from collections import defaultdict
 from typing import Optional,List
 from Simulation_Frame import Warehouse,Location,Node,Solution,Simulation,Path,Driver
 import matplotlib.pyplot as plt
@@ -11,6 +10,7 @@ class Warehouses(Solution):
         self.sink_paths = []
         self.simulation = simulation if simulation else None
         self.name = name
+        self.range = 2500
         self.driver_capacity = 50
         self.metrics = {
             "algorithm_name":name,
@@ -25,17 +25,58 @@ class Warehouses(Solution):
         warehouse:Warehouse = Warehouse([],Location(center,center)) #set it at the center of the map (just a placeholder for now)
         nodes = self.simulation.get_nodes()
 
+        warehouses:List[Warehouse] = []
+        x,y = 0,0
+        area = self.simulation.area
+        while x <= area:
+            warehouses.append(Warehouse([],Location(x,y)))
+            x += self.range
+            y += self.range
+
+
+
         #fill warehouse with all the sources
+        source_drivers:List[Driver] = []
+
         sources = list(filter(lambda x: x.is_source,nodes))
-        for source in sources:
-            fill_path = Path([source,warehouse])
-            warehouse.add_node(source)
-            self.simulation.satisfy_node(source)
-            paths.append(fill_path)
-            self.source_paths.append(fill_path)
+        while not self.simulation.all_nodes_satisfied(sources=True):
+            for start in sources:
+                if self.simulation.is_node_satisfied(start):
+                    continue
+                path = Path()
+                driver = Driver(self.driver_capacity)
+                path.add_node(start)
+                if not driver.can_add_node(start):
+                    continue
+                self.simulation.satisfy_node(start)
+                driver.add_node(start)
+                available_sources = list(filter(lambda x: not self.simulation.is_node_satisfied(x),sources))
+                closest_sources = sorted(available_sources,key=lambda x:driver.location.get_distance(x.location))
+                for source in closest_sources:
+                    if self.simulation.is_node_satisfied(source):
+                        continue
+                    if not driver.is_full():
+                        if not driver.can_add_node(source):
+                            available = driver.get_remaining_capacity()
+                            driver.add_item(source.item,available,node=source)
+                            source.reduce_source(source.value - available)
+                            self.simulation.satisfy_node(source)
+                            path.add_node(source)    
+                        driver.add_node(source)
+                        self.simulation.satisfy_node(source)
+                        path.add_node(source)
+                        
+                
+                path.add_node(warehouse)
+                warehouse.add_inventory(driver.inventory)
+                paths.append(path)
+                self.source_paths.append(path)
+        
+        # if show == True:
+        #     print(len(self.simulation.get_unsatisfied_nodes()))
         
         #from warehouse, create all the different Drivers
-        drivers:List[Driver] = []
+        sink_drivers:List[Driver] = []
         inventory = warehouse.inventory
         while not inventory.is_empty():
             driver = Driver(self.driver_capacity)
@@ -52,17 +93,18 @@ class Warehouses(Solution):
                     driver.add_item(item,add_amt)
                     inventory.remove_item(item,add_amt)
                     break
-            drivers.append(driver)
+            sink_drivers.append(driver)
 
-        if show:
-            for driver in drivers:
-                print(driver)
+        # if show:
+        #     for driver in sink_drivers:
+        #         print(driver)
 
         #generate the path for each driver from the warehouse
         sinks = list(filter(lambda x: not x.is_source,nodes))
-        for driver in drivers:
+        for driver in sink_drivers:
             path = Path()
             path.add_node(warehouse)
+            driver.set_location(warehouse.location)
             items = driver.get_items()
             for item in items:
                 amount_left = driver.get_amount(item)
@@ -103,6 +145,19 @@ class Warehouses(Solution):
     def visualize_paths(self, paths):
         return None
     
+    def sum_of_all_paths(self):
+        sum = 0
+        for path in self.paths:
+            sum += len(path) - 1
+        return sum
+
+    def num_unique_nodes_in_paths(self):
+        nodes = set()
+        for path in self.paths:
+            for node in path.nodes:
+                nodes.add(node)
+        return len(nodes)
+
     def print_paths(self):
         return super().print_paths()
 

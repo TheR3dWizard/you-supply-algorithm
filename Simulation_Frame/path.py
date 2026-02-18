@@ -6,17 +6,34 @@ from .node import Node
 class Path:
     def __init__(self,nodes:Optional[List[Node]]=None):
         self.nodes = nodes if nodes else []
+        self.changed=True
+        self.distance = self.get_length()
 
     def get_length(self) -> float:
 
+        if not self.changed:
+            return self.distance
+         
         if self.nodes == []:
             return 0.0
 
         total_length = 0.0
         for i in range(1,len(self.nodes)):
             total_length += self.nodes[i-1].location.get_distance(self.nodes[i].location)
-
+        
+        self.distance = total_length
+        self.changed = False
         return total_length
+
+    def add_node(self,node:Node):
+        self.nodes.append(node)
+        self.changed = True
+
+    def get_end(self) -> Node:
+        return self.nodes[-1]
+    
+    def __len__(self) -> int:
+        return len(self.nodes)
 
     def __repr__(self):
         UNDERLINE = "\033[4m"

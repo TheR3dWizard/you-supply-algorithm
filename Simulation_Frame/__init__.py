@@ -4,4 +4,4 @@ from .node import Node
 from .path import Path
 from .solution import Solution
 from .cluster import Cluster
-from .visualization import PathVisualizer
+# from .visualization import PathVisualizer

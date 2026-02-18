@@ -53,6 +53,8 @@ class YouSupplyAlgo(Solution):
                     cluster.add_source(node)
             self.clusterlist.append(cluster)
 
+        return self.clusterlist
+
 
     def feasibility_cluster(self,cluster:Cluster) -> Cluster:
         if cluster.sinks == [] or cluster.sources == []:

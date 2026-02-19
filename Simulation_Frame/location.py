@@ -1,4 +1,4 @@
-import OSMRouter
+import Simulation_Frame.OSMRouter as OSMRouter
 
 class Location:
     def __init__(self, x:int,y:int):

@@ -30,7 +30,7 @@ def get_bounding_box(center_point: tuple[float, float], dist: float = 5000) -> d
     if _gu is None:
         raise RuntimeError("Graph not initialized. Call init_graph first.")
 
-    longmin, latmin, longmax, latmax = ox.bbox_from_point(center_point, dist=dist)
+    longmin, latmin, longmax, latmax = ox.utils_geo.bbox_from_point(center_point, dist=dist)
     return {
         "latitude":[latmin, latmax],
         "longitude":[longmin, longmax]

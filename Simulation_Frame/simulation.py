@@ -3,13 +3,18 @@ import random
 from .node import Node
 from .location import Location
 import matplotlib.pyplot as plt
-
+import numpy as np
+from .constants import Constants
 class Simulation:
-    def __init__(self,area:int,size:int,range:int,items:List[str]=None):
+    def __init__(self,area:int,size:int,range:int,items:List[str]=None,latmin:np.float64=Constants.DEFAULT_LATMIN,latmax:np.float64=Constants.DEFAULT_LATMAX,longmin:np.float64=Constants.DEFAULT_LONGMIN,longmax:np.float64=Constants.DEFAULT_LONGMAX):
         self.nodes:List[Node] = []
         self.satisfied_nodes = []
         self.area = area
         self.size = size
+        self.latmin = latmin
+        self.latmax = latmax
+        self.longmin = longmin
+        self.longmax = longmax
         if not items:
             self.items = [
                 "water bottle",
@@ -26,12 +31,15 @@ class Simulation:
             value = random.randint(-1*self.range,self.range)
             while value == 0:
                 value = random.randint(-1*self.range,self.range)
-            x_val = random.randint(0,self.area)
-            y_val = random.randint(0,self.area)
+            x_val = np.random.uniform(self.latmin,self.latmax)
+            y_val = np.random.uniform(self.longmin,self.longmax)
             location = Location(x_val,y_val)
             node = Node(item,value,location)
             self.nodes.append(node)
             self.satisfied_nodes.append(False)
+            # carriage print as a status check for the loop
+            print(f"Populated {i+1} nodes",end="\r")
+        print(f"Populated {self.size} nodes")
 
     def add_node(self,node:Node):
         self.nodes.append(node)

@@ -7,7 +7,7 @@ init_graph(center_point=(10.991343783982689, 77.0044269727586), dist=5000)
 bounding_box = get_bounding_box(center_point=(10.991343783982689, 77.0044269727586), dist=5000)
 print(bounding_box)
 
-sim = Simulation(area=10000,size=1000,range=20,items = ["1","2","3","4","5","6","7","8","9","10"])
+sim = Simulation(area=10000,size=1000,range=20,items = ["1","2","3","4","5","6","7","8","9","10"],latmin=bounding_box["latitude"][0],latmax=bounding_box["latitude"][1],longmin=bounding_box["longitude"][0],longmax=bounding_box["longitude"][1])
 sim.populate_nodes()
 all_nodes = sim.get_nodes().copy()
 # print(sim)

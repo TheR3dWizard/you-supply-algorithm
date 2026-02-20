@@ -1,2 +1,8 @@
+import numpy as np
+
 class Constants:
-    SESSION = "session"
+    SESSION = "session1"
+    DEFAULT_LATMIN = np.float64(10.946377767208045)
+    DEFAULT_LATMAX = np.float64(11.036309800757333)
+    DEFAULT_LONGMIN = np.float64(76.95862068542934)
+    DEFAULT_LONGMAX = np.float64(77.05023326008785)

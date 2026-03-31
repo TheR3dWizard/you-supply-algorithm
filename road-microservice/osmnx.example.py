@@ -4,11 +4,22 @@ import osmnx as ox
 import networkx as nx
 import matplotlib.pyplot as plt
 
+'''
+Washington, DC
+38.90717252385287, -77.03654700873811
+
+Madrid, Spain
+40.42790121890256, -3.69577108966905
+
+Seoul, South Korea
+37.508479378257285, 127.03866126151253
+'''
+
 # Define the coordinate as (latitude, longitude)
-center_point = (10.991343783982689, 77.0044269727586)
+center_point = (37.508479378257285, 127.03866126151253)
 
 # Download road network around the coordinate (radius in meters)
-G_directed = ox.graph_from_point(center_point, dist=5000, network_type="drive")
+G_directed = ox.graph_from_point(center_point, dist=1000, network_type="drive")
 
 # FIX: Use the new convert module for undirected conversion
 gu = ox.convert.to_undirected(G_directed)
@@ -45,17 +56,22 @@ ec = [cmap(norm(val)) for val in edge_values]
 #     bgcolor='k' # Black background makes the colors pop
 # )
 
-startpoint = (11.0183, 76.9631)
+'''
+nehru stadium: 11.006600, 76.969415
+vaazhankulam: 10.993650, 76.980464
+'''
+
+startpoint = (10.993650, 76.980464)
 endpoint = (10.991343783982689, 77.0044269727586)
 
 orig_node = ox.distance.nearest_nodes(gu, X=startpoint[1], Y=startpoint[0])
 dest_node = ox.distance.nearest_nodes(gu, X=endpoint[1], Y=endpoint[0])
 
-route = nx.shortest_path(gu, orig_node, dest_node, weight='my_heuristic')
+route = nx.astar_path(gu, orig_node, dest_node, weight='my_heuristic')
 # Plot the route
 fig, ax = ox.plot_graph_route(gu, route, route_linewidth=6, node_size=0, bgcolor='k')
 plt.show()  
 
-routewithoutheuristic = nx.shortest_path(gu, orig_node, dest_node)
+routewithoutheuristic = nx.astar_path(gu, orig_node, dest_node)
 fig, ax = ox.plot_graph_route(gu, routewithoutheuristic, route_linewidth=6, node_size=0, bgcolor='k')
 plt.show()  

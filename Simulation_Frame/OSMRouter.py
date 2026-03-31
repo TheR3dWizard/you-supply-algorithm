@@ -39,3 +39,24 @@ def get_bounding_box(center_point: tuple[float, float], dist: float = 5000) -> d
         "latitude":[latmin, latmax],
         "longitude":[longmin, longmax]
     }
+
+def initialize_adaptive_edges(G, default_speed_mps=13.9):
+    for u, v, data in G.edges(data=True):
+
+        length = data.get("length", 100.0)  # meters
+        T0 = length / default_speed_mps
+
+        data["adaptive"] = {
+            "T0": T0,
+            "alpha": 0.5,
+            "beta": 0.1,
+            "h": 1.0,
+            "eta_alpha": 0.05,
+            "eta_beta": 0.02,
+            "mu": 0.001,
+            "nu": 0.05,
+            "lambda_risk": 1.0,
+        }
+
+        # initial heuristic
+        data["heuristic"] = T0
